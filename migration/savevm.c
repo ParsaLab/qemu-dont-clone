@@ -69,6 +69,7 @@
 #include "yank_functions.h"
 #include "sysemu/qtest.h"
 #include "options.h"
+#include "io/channel-command.h"
 
 const unsigned int postcopy_ram_discard_version;
 
@@ -3129,6 +3130,15 @@ void qmp_xen_load_devices_state(const char *filename, Error **errp)
     migration_incoming_state_destroy();
 }
 
+static char *get_zstd(Error **errp)
+{
+    char *zstd = g_find_program_in_path("zstd");
+    if (!zstd)
+        error_setg(errp, "zstd not found in PATH");
+
+    return zstd;
+}
+
 bool load_snapshot(const char *name, const char *vmstate,
                    bool has_devices, strList *devices, Error **errp)
 {
@@ -3162,9 +3172,13 @@ bool load_snapshot(const char *name, const char *vmstate,
     aio_context_acquire(aio_context);
     ret = bdrv_snapshot_find(bs_vm_state, &sn, name);
     aio_context_release(aio_context);
+
+    char snapshot_name[293];
+    snprintf(snapshot_name, sizeof(snapshot_name), "%s.zstd", sn.name);
+
     if (ret < 0) {
         return false;
-    } else if (sn.vm_state_size == 0) {
+    } else if (sn.vm_state_size == 0 && !g_file_test(snapshot_name, G_FILE_TEST_IS_REGULAR)) {
         error_setg(errp, "This is a disk-only snapshot. Revert to it "
                    " offline using qemu-img");
         return false;
@@ -3185,10 +3199,35 @@ bool load_snapshot(const char *name, const char *vmstate,
     }
 
     /* restore the VM state */
-    f = qemu_fopen_bdrv(bs_vm_state, 0);
-    if (!f) {
-        error_setg(errp, "Could not open VM state file");
-        goto err_drain;
+    if (g_file_test(snapshot_name, G_FILE_TEST_IS_REGULAR)) {
+        char *zstd = get_zstd(errp);
+        if (!zstd)
+            return false;
+
+        const char *args[] = {zstd, "-f", "-q", "-T0", "-d", "-c", snapshot_name, NULL};
+
+        QIOChannelCommand *ioc = qio_channel_command_new_spawn(args, O_RDONLY, errp);
+        if (!ioc) {
+            error_setg(errp, "Could not create pipe for zstd");
+            return false;
+        }
+
+        qio_channel_set_name(QIO_CHANNEL(ioc), "load_snapshot");
+
+        f = qemu_file_new_input(QIO_CHANNEL(ioc));
+        if (!f) {
+            error_setg(errp, "Could not open VM state file");
+            return false;
+        }
+
+        g_free(zstd);
+
+    } else {
+        f = qemu_fopen_bdrv(bs_vm_state, 0);
+        if (!f) {
+            error_setg(errp, "Could not open VM state file");
+            goto err_drain;
+        }
     }
 
     qemu_system_reset(SHUTDOWN_CAUSE_SNAPSHOT_LOAD);
