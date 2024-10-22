@@ -42,3 +42,17 @@
 #
 ##
 { 'command': 'flexus-save-measure', 'data': {'*path':'str'} }
+
+##
+# @flexus-save-ckpt:
+#
+# Save Flexus checkpoint on the disk
+#
+# @path: Diskpath to save the ckpt directory
+#
+# Returns: nothing on success.
+#
+# Since: 8.2
+#
+##
+{ 'command': 'flexus-save-ckpt', 'data': {'*path':'str'} }
