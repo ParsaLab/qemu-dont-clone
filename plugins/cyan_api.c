@@ -43,6 +43,7 @@ qemu_plugin_snapshot_cpu_clock_update_cb cyan_snapshot_cpu_clock_udpate_cb = NUL
 qemu_plugin_snapshot_cb_t cyan_loadvm_cb = NULL;
 qemu_plugin_event_loop_poll_cb_t cyan_el_pool_cb = NULL;
 qemu_plugin_periodic_check_cb_t cyan_periodic_check_cb = NULL;
+qemu_plugin_flushing_local_tlb_t cyan_flushing_local_tlb_cb = NULL;
 
 // The virtual time of each CPUs.
 struct cpu_virtual_time_t cpu_virtual_time[256];
@@ -274,6 +275,17 @@ void qemu_plugin_set_vcpu_vtime(uint32_t cpu_idx, uint64_t vtime) {
 uint64_t qemu_plugin_get_vcpu_ipc(uint32_t cpu_idx) {
   assert(current_cpu && current_cpu->cpu_index == cpu_idx);
   return current_cpu->ipc;
+}
+
+bool qemu_plugin_register_flushing_local_tlb_cb(
+    qemu_plugin_flushing_local_tlb_t cb) {
+  
+  if (cyan_flushing_local_tlb_cb) {
+    return false;
+  }
+
+  cyan_flushing_local_tlb_cb = cb;
+  return true;
 }
 
 #endif

@@ -8,6 +8,8 @@
 
 #include "qemu/osdep.h"
 #include "qemu/log.h"
+#include "qemu/plugin-cyan.h"
+#include "qemu/qemu-plugin.h"
 #include "trace.h"
 #include "cpu.h"
 #include "internals.h"
@@ -4703,6 +4705,10 @@ static void tlbi_aa64_vmalle1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
     CPUState *cs = env_cpu(env);
     int mask = vae1_tlbmask(env);
 
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
+    }
+
     tlb_flush_by_mmuidx_all_cpus_synced(cs, mask);
 }
 
@@ -4711,6 +4717,10 @@ static void tlbi_aa64_vmalle1_write(CPUARMState *env, const ARMCPRegInfo *ri,
 {
     CPUState *cs = env_cpu(env);
     int mask = vae1_tlbmask(env);
+
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
+    }
 
     if (tlb_force_broadcast(env)) {
         tlb_flush_by_mmuidx_all_cpus_synced(cs, mask);
@@ -4732,6 +4742,10 @@ static void tlbi_aa64_alle1_write(CPUARMState *env, const ARMCPRegInfo *ri,
 {
     CPUState *cs = env_cpu(env);
     int mask = alle1_tlbmask(env);
+
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
+    }
 
     tlb_flush_by_mmuidx(cs, mask);
 }
@@ -4759,6 +4773,10 @@ static void tlbi_aa64_alle1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
 {
     CPUState *cs = env_cpu(env);
     int mask = alle1_tlbmask(env);
+
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
+    }
 
     tlb_flush_by_mmuidx_all_cpus_synced(cs, mask);
 }
@@ -4818,6 +4836,16 @@ static void tlbi_aa64_vae1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
     uint64_t pageaddr = sextract64(value << 12, 0, 56);
     int bits = vae1_tlbbits(env, pageaddr);
 
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(
+        current_cpu->cpu_index, 
+        QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
+        0, 
+        pageaddr >> 12,
+        1
+      );
+    }
+
     tlb_flush_page_bits_by_mmuidx_all_cpus_synced(cs, pageaddr, mask, bits);
 }
 
@@ -4834,6 +4862,16 @@ static void tlbi_aa64_vae1_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int mask = vae1_tlbmask(env);
     uint64_t pageaddr = sextract64(value << 12, 0, 56);
     int bits = vae1_tlbbits(env, pageaddr);
+
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(
+        current_cpu->cpu_index, 
+        QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
+        0, 
+        pageaddr >> 12,
+        1
+      );
+    }
 
     if (tlb_force_broadcast(env)) {
         tlb_flush_page_bits_by_mmuidx_all_cpus_synced(cs, pageaddr, mask, bits);
@@ -4980,6 +5018,16 @@ static void do_rvae_write(CPUARMState *env, uint64_t value,
     range = tlbi_aa64_get_range(env, one_idx, value);
     bits = tlbbits_for_regime(env, one_idx, range.base);
 
+    if (cyan_flushing_local_tlb_cb != NULL) {
+      cyan_flushing_local_tlb_cb(
+        current_cpu->cpu_index, 
+        QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
+        0, 
+        range.base >> 12,
+        range.length >> 12
+      );
+    }
+
     if (synced) {
         tlb_flush_range_by_mmuidx_all_cpus_synced(env_cpu(env),
                                                   range.base,
@@ -5003,6 +5051,8 @@ static void tlbi_aa64_rvae1_write(CPUARMState *env,
      * flush-last-level-only.
      */
 
+     // TODO: Add instrumentation.
+
     do_rvae_write(env, value, vae1_tlbmask(env),
                   tlb_force_broadcast(env));
 }
@@ -5018,6 +5068,8 @@ static void tlbi_aa64_rvae1is_write(CPUARMState *env,
      * flush-for-specific-ASID-only, flush-last-level-only or inner/outer
      * shareable specific flushes.
      */
+
+    // TODO: Add instrumentation.
 
     do_rvae_write(env, value, vae1_tlbmask(env), true);
 }
@@ -5397,7 +5449,7 @@ static const ARMCPRegInfo v8_cp_reginfo[] = {
     { .name = "TLBI_ASIDE1IS", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 3, .opc2 = 2,
       .access = PL1_W, .accessfn = access_ttlbis, .type = ARM_CP_NO_RAW,
-      .fgt = FGT_TLBIASIDE1IS,
+      .fgt = FGT_TLBIASIDE1IS, // TODO: Add support to parse ASID.
       .writefn = tlbi_aa64_vmalle1is_write },
     { .name = "TLBI_VAAE1IS", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 3, .opc2 = 3,
@@ -5427,7 +5479,7 @@ static const ARMCPRegInfo v8_cp_reginfo[] = {
     { .name = "TLBI_ASIDE1", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 7, .opc2 = 2,
       .access = PL1_W, .accessfn = access_ttlb, .type = ARM_CP_NO_RAW,
-      .fgt = FGT_TLBIASIDE1,
+      .fgt = FGT_TLBIASIDE1, // TODO: Add support to parse ASID.
       .writefn = tlbi_aa64_vmalle1_write },
     { .name = "TLBI_VAAE1", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 7, .opc2 = 3,
@@ -7456,7 +7508,7 @@ static const ARMCPRegInfo tlbios_reginfo[] = {
     { .name = "TLBI_ASIDE1OS", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 1, .opc2 = 2,
       .access = PL1_W, .accessfn = access_ttlbos, .type = ARM_CP_NO_RAW,
-      .fgt = FGT_TLBIASIDE1OS,
+      .fgt = FGT_TLBIASIDE1OS, // TODO: Add support for ASID
       .writefn = tlbi_aa64_vmalle1is_write },
     { .name = "TLBI_VAAE1OS", .state = ARM_CP_STATE_AA64,
       .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 1, .opc2 = 3,

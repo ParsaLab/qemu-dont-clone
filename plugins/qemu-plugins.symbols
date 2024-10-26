@@ -70,4 +70,5 @@
   qemu_plugin_get_vcpu_vtime;
   qemu_plugin_set_vcpu_vtime;
   qemu_plugin_get_vcpu_ipc;
+  qemu_plugin_register_flushing_local_tlb_cb;
 };

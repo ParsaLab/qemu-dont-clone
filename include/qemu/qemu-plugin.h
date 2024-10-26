@@ -984,4 +984,23 @@ CYAN_API uint64_t qemu_plugin_get_vcpu_ipc(uint32_t cpu_idx);
 //   uint64_t *xregs;
 // } qemu_per_cpu_exchangable_state_t;
 
+
+enum qemu_plugin_tlb_flush_type_t {
+  QEMU_PLUGIN_TLB_FLUSH_ALL = 0,
+  QEMU_PLUGIN_TLB_FLUSH_BY_ASID = 1,
+  QEMU_PLUGIN_TLB_FLUSH_BY_VPN = 2,
+  QEMU_PLUGIN_TLB_FLUSH_BY_ASID_AND_VPN = 3,
+};
+
+typedef void (*qemu_plugin_flushing_local_tlb_t)(
+    uint32_t vcpu_idx,
+    enum qemu_plugin_tlb_flush_type_t mode,
+    uint64_t asid,
+    uint64_t vpn,
+    uint64_t number_of_pages
+);
+
+CYAN_API bool qemu_plugin_register_flushing_local_tlb_cb(
+    qemu_plugin_flushing_local_tlb_t cb);
+
 #endif /* QEMU_QEMU_PLUGIN_H */
