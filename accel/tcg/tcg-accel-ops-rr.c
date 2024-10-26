@@ -314,7 +314,7 @@ static void *rr_cpu_thread_fn(void *arg)
             if (icount_checking_period != 0 && cycle >= next_check_threshold) {
                 if (cyan_periodic_check_cb) {
                     if(cyan_periodic_check_cb(icount_checking_period)) {
-                        vm_stop(RUN_STATE_SAVE_VM);
+                        pause_all_vcpus();
                     };
                 }
                 next_check_threshold += icount_checking_period;

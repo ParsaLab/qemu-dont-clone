@@ -177,7 +177,8 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
         if (barrier->next_check_threshold != 0 && barrier->current_cycle >= barrier->next_check_threshold) {
             if (cyan_periodic_check_cb != NULL) {
                 if(cyan_periodic_check_cb(quantum_check_threshold)) {
-                    vm_stop(RUN_STATE_SAVE_VM);
+                    // vm_stop(RUN_STATE_SAVE_VM);
+                    pause_all_vcpus();
                     barrier->stop_request = 1;
                 }
             } 
