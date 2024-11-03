@@ -139,7 +139,7 @@
 #endif
 
 #ifdef CONFIG_SNAPVM_EXT
-#include "middleware/savevm-external/snapvm-external.h"
+#include "middleware/snapvm-external/snapvm-external.h"
 #endif
 
 
@@ -653,14 +653,6 @@ static int cleanup_add_fd(void *opaque, QemuOpts *opts, Error **errp)
 
 static int drive_init_func(void *opaque, QemuOpts *opts, Error **errp)
 {
-
-#ifdef CONFIG_SNAPVM_EXT
-    if (qemu_snapvm_ext_state.is_enabled)
-    {
-        snapvm_init(opts, loadvm, errp);
-    }
-#endif
-
     BlockInterfaceType *block_default_type = opaque;
 
     return drive_new(opts, *block_default_type, errp) == NULL;
@@ -2733,13 +2725,11 @@ void qmp_x_exit_preconfig(Error **errp)
     if (loadvm) {
 
 #ifdef CONFIG_SNAPVM_EXT
-	if (qemu_snapvm_ext_state.is_enabled)
-		load_snapshot_external(/*loadvm, NULL, false, NULL, -1, &error_fatal*/);
-	else
-        load_snapshot(loadvm, NULL, false, NULL, &error_fatal);
-#else
-        load_snapshot(loadvm, NULL, false, NULL, &error_fatal);
+    if (qemu_snapvm_state.is_load_enabled)
+        load_snapshot_external(loadvm, NULL, false, NULL, &error_fatal);
+    else
 #endif
+        load_snapshot(loadvm, NULL, false, NULL, &error_fatal);
 
     }
     if (replay_mode != REPLAY_MODE_NONE) {
@@ -2805,6 +2795,10 @@ void qemu_init(int argc, char **argv)
 
 #ifdef CONFIG_LIBQFLEX
     qemu_add_opts(&qemu_libqflex_opts);
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+    qemu_add_opts(&qemu_snapvm_loadvm_opts);
 #endif
 
     qemu_add_run_with_opts();
@@ -3668,21 +3662,20 @@ void qemu_init(int argc, char **argv)
 #endif /* CONFIG_POSIX */
 
 #ifdef CONFIG_LIBQFLEX
-
             case QEMU_OPTION_libqflex:
                 libqflex_parse_opts(optarg);
                 break;
-
 #endif /* CONFIG_LIBQFLEX */
+
 #ifdef CONFIG_SNAPVM_EXT
-            case QEMU_OPTION_savevm_external:
-		        qemu_snapvm_ext_state.is_enabled = true;
+            case QEMU_OPTION_snapvm_external:
+                snapvm_external_parse_opts(optarg);
+                qemu_snapvm_state.is_save_enabled = true;
                 break;
 
             case QEMU_OPTION_loadvm_external:
-		        loadvm = optarg;
-                qemu_snapvm_ext_state.is_enabled        = true;
-                qemu_snapvm_ext_state.has_been_loaded   = true;
+                loadvm = optarg;
+                qemu_snapvm_state.is_load_enabled = true;
                 break;
 #endif
 
@@ -3825,5 +3818,9 @@ void qemu_init(int argc, char **argv)
      */
     libqflex_init();
 
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+    snapvm_init();
 #endif
 }

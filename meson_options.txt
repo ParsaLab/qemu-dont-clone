@@ -379,7 +379,7 @@ option('hexagon_idef_parser', type : 'boolean', value : true,
 option('libqflex', type : 'feature', value : 'auto',
        description: 'QFlex support')
 
-option('savevm-external', type : 'feature', value : 'auto',
+option('snapvm-external', type : 'feature', value : 'auto',
        description: 'Support for external snapshot')
 
 #  ___  __ _ _ __ __ _ _ __

@@ -1935,9 +1935,8 @@ middleware_include = false
 middleware_dep = {}
 middleware_option = {
   'libqflex': [],
-  'savevm-external': [],
+  'snapvm-external': [],
 }
-
 
 foreach name, dep: middleware_option
 
@@ -1955,7 +1954,6 @@ foreach name, dep: middleware_option
     error('Middleware directory (' + name + ') was not found in "./middleware/"')
   endif
 endforeach
-
 
 #  ___  __ _ _ __ __ _ _ __
 # / __|/ _` | '__/ _` | '_ \
@@ -2203,7 +2201,7 @@ config_host_data.set('CONFIG_RBD', rbd.found())
 config_host_data.set('CONFIG_RDMA', rdma.found())
 config_host_data.set('CONFIG_RELOCATABLE', get_option('relocatable'))
 config_host_data.set('CONFIG_SAFESTACK', get_option('safe_stack'))
-config_host_data.set('CONFIG_SNAPVM_EXT', middleware_dep['savevm-external'].found())
+config_host_data.set('CONFIG_SNAPVM_EXT', middleware_dep['snapvm-external'].found())
 config_host_data.set('CONFIG_SDL', sdl.found())
 config_host_data.set('CONFIG_SDL_IMAGE', sdl_image.found())
 config_host_data.set('CONFIG_SECCOMP', seccomp.found())

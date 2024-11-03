@@ -172,7 +172,6 @@ meson_options_help() {
   printf "%s\n" '  rdma            Enable RDMA-based migration'
   printf "%s\n" '  replication     replication support'
   printf "%s\n" '  rutabaga-gfx    rutabaga_gfx support'
-  printf "%s\n" '  savevm-external Support for external snapshot'
   printf "%s\n" '  sdl             SDL user interface'
   printf "%s\n" '  sdl-image       SDL Image support for icons'
   printf "%s\n" '  seccomp         seccomp support'
@@ -181,6 +180,7 @@ meson_options_help() {
   printf "%s\n" '  slirp-smbd      use smbd (at path --smbd=*) in slirp networking'
   printf "%s\n" '  smartcard       CA smartcard emulation support'
   printf "%s\n" '  snappy          snappy compression support'
+  printf "%s\n" '  snapvm-external Support for external snapshot'
   printf "%s\n" '  sndio           sndio sound support'
   printf "%s\n" '  sparse          sparse checker'
   printf "%s\n" '  spice           Spice server support'
@@ -463,8 +463,6 @@ _meson_option_parse() {
     --disable-safe-stack) printf "%s" -Dsafe_stack=false ;;
     --enable-sanitizers) printf "%s" -Dsanitizers=true ;;
     --disable-sanitizers) printf "%s" -Dsanitizers=false ;;
-    --enable-savevm-external) printf "%s" -Dsavevm-external=enabled ;;
-    --disable-savevm-external) printf "%s" -Dsavevm-external=disabled ;;
     --enable-sdl) printf "%s" -Dsdl=enabled ;;
     --disable-sdl) printf "%s" -Dsdl=disabled ;;
     --enable-sdl-image) printf "%s" -Dsdl_image=enabled ;;
@@ -482,6 +480,8 @@ _meson_option_parse() {
     --smbd=*) quote_sh "-Dsmbd=$2" ;;
     --enable-snappy) printf "%s" -Dsnappy=enabled ;;
     --disable-snappy) printf "%s" -Dsnappy=disabled ;;
+    --enable-snapvm-external) printf "%s" -Dsnapvm-external=enabled ;;
+    --disable-snapvm-external) printf "%s" -Dsnapvm-external=disabled ;;
     --enable-sndio) printf "%s" -Dsndio=enabled ;;
     --disable-sndio) printf "%s" -Dsndio=disabled ;;
     --enable-sparse) printf "%s" -Dsparse=enabled ;;
