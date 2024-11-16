@@ -288,4 +288,8 @@ bool qemu_plugin_register_flushing_local_tlb_cb(
   return true;
 }
 
+uint64_t qemu_plugin_cpu_get_next_deadline(uint32_t cpu_index) {
+  return cpu_virtual_time[cpu_index].next_deadline_in_ns;
+}
+
 #endif

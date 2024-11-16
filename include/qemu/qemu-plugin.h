@@ -944,8 +944,8 @@ CYAN_API typedef bool (*qemu_plugin_periodic_check_cb_t)(
  *
  * @cb: function is called every time the periodic checking is triggered.
  *
- * When the function return trues, the VM stop request is sent, and all vCPUs
- * will be paused. This is useful for taking the snapshot of the system.
+ * When the function return trues, all threads wait for the runstate to become
+ * RUN_STATE_SAVE_VM so that a snapshot can be taken by the event loop poll callback.
  *
  * There are two scenario when the periodic checking is triggered:
  * - When icount mode is on, and the `icount_checking_period` is set to
@@ -973,6 +973,8 @@ qemu_plugin_register_periodic_check_cb(qemu_plugin_periodic_check_cb_t cb);
 CYAN_API uint64_t qemu_plugin_get_vcpu_vtime(uint32_t cpu_idx);
 CYAN_API void qemu_plugin_set_vcpu_vtime(uint32_t cpu_idx, uint64_t vtime);
 CYAN_API uint64_t qemu_plugin_get_vcpu_ipc(uint32_t cpu_idx);
+
+CYAN_API uint64_t qemu_plugin_cpu_get_next_deadline(uint32_t cpu_index);
 
 // typedef struct qemu_per_cpu_exchangable_state_t {
 //   uint64_t ipc;

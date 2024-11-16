@@ -1593,6 +1593,39 @@ void arm_cpu_finalize_features(ARMCPU *cpu, Error **errp)
     }
 }
 
+static uint64_t arm_cpu_query_local_timer_deadline(CPUState *cs) {
+    ARMCPU *cpu = ARM_CPU(cs);
+    CPUARMState *env = &cpu->env;
+    uint64_t deadline = UINT64_MAX;
+
+    int64_t current_time = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    assert(current_time >= 0);
+
+    if (arm_feature(env, ARM_FEATURE_GENERIC_TIMER)) {
+        for (int i = 0; i < NUM_GTIMERS; ++i) {
+
+            int64_t expired_time = timer_expire_time_ns(cpu->gt_timer[i]);
+
+            if (expired_time < 0) {
+                continue;
+            }
+
+            int64_t delta = expired_time - current_time;
+
+            if (delta < 0) {
+                // Right now a timer is expired, so we can return immediately
+                return 0;
+            }
+
+            if (delta > 0 && delta < deadline) {
+                deadline = delta;
+            }
+        }
+    }
+
+    return deadline;
+}
+
 static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
 {
     CPUState *cs = CPU(dev);
@@ -1606,6 +1639,9 @@ static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
     /* Use pc-relative instructions in system-mode */
 #ifndef CONFIG_USER_ONLY
     cs->tcg_cflags |= CF_PCREL;
+
+    // We will override this later if we have a the timer.
+    cs->cb_next_timer_interrupt_time = NULL;
 #endif
 
     /* If we needed to query the host kernel for the CPU features
@@ -1692,6 +1728,9 @@ static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
                                               arm_gt_stimer_cb, cpu);
         cpu->gt_timer[GTIMER_HYPVIRT] = timer_new(QEMU_CLOCK_VIRTUAL, scale,
                                                   arm_gt_hvtimer_cb, cpu);
+
+        // Well, I need to write a function to query the host timer
+        cs->cb_next_timer_interrupt_time = arm_cpu_query_local_timer_deadline;
     }
 #endif
 

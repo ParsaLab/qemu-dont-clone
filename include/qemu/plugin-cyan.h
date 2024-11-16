@@ -39,7 +39,8 @@ extern qemu_plugin_flushing_local_tlb_t cyan_flushing_local_tlb_cb;
 
 struct cpu_virtual_time_t {
   uint64_t vts;
-  uint64_t __padding[7];
+  uint64_t next_deadline_in_ns;
+  uint64_t __padding[6];
 };
 
 extern struct cpu_virtual_time_t cpu_virtual_time[256];

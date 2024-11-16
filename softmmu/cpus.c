@@ -458,25 +458,29 @@ uint64_t qemu_wait_io_event(CPUState *cpu, bool not_running_yet, uint32_t *curre
         if (runstate_is_running()) {
             bool affiliated_with_quantum = cpu->ipc != 0 && quantum_enabled();
             if (affiliated_with_quantum) {
-                // OK, we assume 1M instruction / second speed when we are sleeping. 
-                // This number can be profiled more precisely later, and it can be also read from the excel sheet.
-                uint64_t current_host_time = get_current_timestamp_ns();
-                qemu_cond_timedwait(cpu->halt_cond, &qemu_global_mutex, cpu->quantum_budget / 1000 + 1);
-                uint64_t current_host_time_after_io = get_current_timestamp_ns();
-                uint64_t sleep_time = current_host_time_after_io - current_host_time;
-                // we can clean the quantum budget here.
-               //  assert(sleep_time / 1000 <= cpu->quantum_budget + 1);
-                cpu->quantum_budget -= sleep_time / 1000;
-                
-                // increase the time as well.
-                // cpu_virtual_time[cpu->cpu_index].vts += (sleep_time / 1000) * 100 / cpu->ipc;
+
+                assert(cpu->cb_next_timer_interrupt_time != NULL);
+
+                uint64_t next_deadline = cpu->cb_next_timer_interrupt_time(cpu);
+
+                if (next_deadline == -1) {
+                    // This means that the next timer interrupt is not set.
+                    // We immediately go to the quantum barrier.
+                    cpu->quantum_budget = 0;
+                } else {
+                    cpu->quantum_budget -= next_deadline * cpu->ipc;
+                }
 
                 if (cpu->quantum_budget <= 0) {
                     cpu->quantum_budget = 0;
                     cpu->quantum_budget_depleted = 1;
+                    break; // we need to break in order to wait for the barrier.
+                } else {
+                    // write down the deadline to the core and sleep.
+                    cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = next_deadline;
+                    qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
                 }
 
-                break; // we need to break out in order to wait for the barrier.
             } else {
                 qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
             }

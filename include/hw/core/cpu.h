@@ -456,6 +456,9 @@ struct CPUState {
     uint64_t quantum_generation;
     uint64_t quantum_required;
     int quantum_budget_depleted;
+
+    // State to query the latest timer interrupt deadline.
+    uint64_t (*cb_next_timer_interrupt_time)(CPUState *);
 };
 
 typedef QTAILQ_HEAD(CPUTailQ, CPUState) CPUTailQ;
