@@ -236,12 +236,11 @@ static void *mttcg_cpu_thread_fn(void *arg)
 
                 // register the current thread to the barrier.
                 if (affiliated_with_quantum) {
-                    dynamic_barrier_polling_increase_by_1(&quantum_barrier);
-
-                    cpu->quantum_generation = 0;
+                    cpu->quantum_generation = dynamic_barrier_polling_increase_by_1(&quantum_barrier);
                     cpu->quantum_budget = quantum_size * cpu->ipc;
                     cpu->quantum_required = 0;
                     cpu->quantum_budget_depleted = 0;
+
                     qemu_log("Core%u Quantum Count: %lu cycles, %lu instructions \n", cpu->cpu_index, quantum_size, quantum_size * cpu->ipc);
                 }
 
@@ -258,12 +257,19 @@ static void *mttcg_cpu_thread_fn(void *arg)
                 if (affiliated_with_quantum) {
                     while (cpu->quantum_budget <= 0) {
                         uint64_t old_generation = cpu->quantum_generation;
-                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation);
+                        cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
+                        bool stop_request = false;
+
+                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
             
                         
                         assert(new_generation == old_generation + 1);
                         cpu->quantum_budget += quantum_size * cpu->ipc;
                         cpu->quantum_generation = new_generation;
+
+                        if (stop_request) {
+                            break;
+                        }
                     }
                     
                     if (r == EXCP_QUANTUM) {
@@ -293,12 +299,19 @@ static void *mttcg_cpu_thread_fn(void *arg)
                 if (affiliated_with_quantum) {
                     while (cpu->quantum_budget <= quantum_for_deduction) {
                         uint64_t old_generation = cpu->quantum_generation;
-                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation);
+                        cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
+                        bool stop_request = false;
+
+                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
             
                         
                         assert(new_generation == old_generation + 1);
                         cpu->quantum_budget += quantum_size * cpu->ipc;
                         cpu->quantum_generation = new_generation;
+
+                        if (stop_request) {
+                            break;
+                        }
                     }
                 }
                 assert(cpu->quantum_budget_depleted == false);
@@ -321,12 +334,18 @@ static void *mttcg_cpu_thread_fn(void *arg)
             if (affiliated_with_quantum) {
                 while (cpu->quantum_budget <= 0) {
                     uint64_t old_generation = cpu->quantum_generation;
-                    uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation);
+                    cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
+                    bool stop_request = false;
+
+                    uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
         
-                    
                     assert(new_generation == old_generation + 1);
                     cpu->quantum_budget += quantum_size * cpu->ipc;
                     cpu->quantum_generation = new_generation;
+
+                    if (stop_request) {
+                        break;
+                    }
                 }
             } else {
                 assert(false);

@@ -5,10 +5,9 @@
 #include <unistd.h>
 
 #include "qemu/osdep.h"
-#include "sysemu/cpus.h"
+#include "sysemu/runstate.h"
 #include "sysemu/quantum.h"
 #include "qemu/plugin-cyan.h"
-#include "sysemu/runstate.h"
 
 
 
@@ -161,7 +160,7 @@ static void dynamic_barrier_polling_release_lock(dynamic_barrier_polling_t *barr
     atomic_fetch_add(&barrier->lock.now_serving, 1);
 }
 
-uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32_t private_generation) {
+uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32_t private_generation, bool *stop_request) {
     dynamic_barrier_polling_acquire_lock(barrier);
 
     uint64_t current_gen = atomic_load(&barrier->generation);
@@ -177,9 +176,11 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
         if (barrier->next_check_threshold != 0 && barrier->current_cycle >= barrier->next_check_threshold) {
             if (cyan_periodic_check_cb != NULL) {
                 if(cyan_periodic_check_cb(quantum_check_threshold)) {
-                    // vm_stop(RUN_STATE_SAVE_VM);
-                    pause_all_vcpus();
-                    barrier->stop_request = 1;
+                    barrier->stop_request = true;
+                    // wait for the machine state to become suspended for VM.
+                    while (runstate_get() != RUN_STATE_SAVE_VM) {
+
+                    }
                 }
             } 
             barrier->next_check_threshold += quantum_check_threshold;
@@ -187,13 +188,10 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
 
         barrier->count = 0;
 
-        // increase the generation and notify others.
-        atomic_fetch_add(&barrier->generation, 1);
-
         // The last core will synchronize the time to all cores.
         // Find the maximum vtime.
         uint64_t max_vtime = 0;
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < barrier->threshold; i++) {
             uint64_t vtime = cpu_virtual_time[i].vts;
             if (vtime > max_vtime) {
                 max_vtime = vtime;
@@ -201,16 +199,25 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
         }
 
         // Synchronize the time.
-        for (int i = 0; i < 256; i++) {
-            assert(cpu_virtual_time[i].vts <= max_vtime);
+        for (int i = 0; i < barrier->threshold; i++) {
+            // assert(cpu_virtual_time[i].vts <= max_vtime);
+            if (cpu_virtual_time[i].vts > max_vtime) {
+                printf("Thread %d, vts: %lu, max_vtime: %lu\n", i, cpu_virtual_time[i].vts, max_vtime);
+                assert(false);
+            }
 
-            // timerlist_reschedule(cpu_virtual_time[i].managed_timers, max_vtime - cpu_virtual_time[i].vts);
             cpu_virtual_time[i].vts = max_vtime;
         }
 
-        dynamic_barrier_polling_release_lock(barrier); // we can release the generation here. 
+        // increase the generation and notify others.
+        atomic_fetch_add(&barrier->generation, 1);
+
+        dynamic_barrier_polling_release_lock(barrier); // we can release the generation here.
+
+        *stop_request = barrier->stop_request;
     } else {
         barrier->count += 1;
+        bool require_stop = barrier->stop_request;
         dynamic_barrier_polling_release_lock(barrier);
 
         // You just need to wait.
@@ -218,9 +225,7 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
             // do nothing, because the current generation is not changed.
         }
 
-        if (barrier->stop_request) {
-            cpu_stop_current();
-        }
+        *stop_request = require_stop;
     }
 
     return current_gen + 1;
