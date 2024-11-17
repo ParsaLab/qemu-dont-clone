@@ -515,6 +515,10 @@ static BlockBackend *blockdev_init(const char *file, QDict *bs_opts,
 
     /* extract parameters */
     snapshot = qemu_opt_get_bool(opts, "snapshot", 0);
+    const char *tmp_snapshot_name = qemu_opt_get(opts, "tmp-snapshot-name");
+    if (tmp_snapshot_name) {
+        qdict_put_str(bs_opts, "tmp-snapshot-name", tmp_snapshot_name);
+    }
 
     account_invalid = account_get_opt(opts, "stats-account-invalid");
     account_failed = account_get_opt(opts, "stats-account-failed");
@@ -3668,6 +3672,11 @@ QemuOptsList qemu_common_drive_opts = {
             .name = "snapshot",
             .type = QEMU_OPT_BOOL,
             .help = "enable/disable snapshot mode",
+        },
+        {
+            .name = "tmp-snapshot-name",
+            .type = QEMU_OPT_STRING,
+            .help = "The name of the snapshot in the image file.",
         },{
             .name = "aio",
             .type = QEMU_OPT_STRING,
