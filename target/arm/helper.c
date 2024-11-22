@@ -7,6 +7,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "hw/core/cpu.h"
 #include "qemu/log.h"
 #include "qemu/plugin-cyan.h"
 #include "qemu/qemu-plugin.h"
@@ -4706,6 +4707,7 @@ static void tlbi_aa64_vmalle1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int mask = vae1_tlbmask(env);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
     }
 
@@ -4719,6 +4721,7 @@ static void tlbi_aa64_vmalle1_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int mask = vae1_tlbmask(env);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
     }
 
@@ -4744,6 +4747,7 @@ static void tlbi_aa64_alle1_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int mask = alle1_tlbmask(env);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
     }
 
@@ -4775,6 +4779,7 @@ static void tlbi_aa64_alle1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int mask = alle1_tlbmask(env);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(current_cpu->cpu_index, QEMU_PLUGIN_TLB_FLUSH_ALL, 0, 0, 0);
     }
 
@@ -4837,6 +4842,7 @@ static void tlbi_aa64_vae1is_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int bits = vae1_tlbbits(env, pageaddr);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(
         current_cpu->cpu_index, 
         QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
@@ -4864,6 +4870,7 @@ static void tlbi_aa64_vae1_write(CPUARMState *env, const ARMCPRegInfo *ri,
     int bits = vae1_tlbbits(env, pageaddr);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == cs);
       cyan_flushing_local_tlb_cb(
         current_cpu->cpu_index, 
         QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
@@ -5019,6 +5026,7 @@ static void do_rvae_write(CPUARMState *env, uint64_t value,
     bits = tlbbits_for_regime(env, one_idx, range.base);
 
     if (cyan_flushing_local_tlb_cb != NULL) {
+      assert(current_cpu == env_cpu(env));
       cyan_flushing_local_tlb_cb(
         current_cpu->cpu_index, 
         QEMU_PLUGIN_TLB_FLUSH_BY_VPN, 
