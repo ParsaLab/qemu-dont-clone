@@ -379,6 +379,71 @@ SRST
   Since 4.0, delvm stopped deleting snapshots by snapshot id, accepting
   only *tag* as parameter.
 ERST
+#ifdef CONFIG_LIBQFLEX
+    {
+          .name       = "flexus-save-measure",
+          .args_type  = "dirname:F?",
+          .params     = "dirname",
+          .help       = "save measurement and statistics on the disk",
+          .cmd        =  hmp_flexus_save_measure
+    },
+SRST
+ ``flexus-save-measure`` *tag*
+  Flexus specific command to save all measurement and statistics on the disk
+ERST
+    {
+          .name       = "flexus-save-ckpt",
+          .args_type  = "dirname:F?",
+          .params     = "dirname",
+          .help       = "send a qmp command to flexus to dump its checkpoint on the drive",
+          .cmd        =  hmp_flexus_save_ckpt
+    },
+SRST
+ ``flexus-save-ckpt`` *tag*
+ Qflex specific, save uArch state as checkpoints on the disk.
+ The tag is a directory the checkpoint will be save to.
+ERST
+    {
+          .name       = "flexus-load-ckpt",
+          .args_type  = "dirname:F",
+          .params     = "dirname",
+          .help       = "send a qmp command to flexus to load its checkpoint from the drive",
+          .cmd        =  hmp_flexus_load_ckpt
+    },
+SRST
+ ``flexus-load-ckpt`` *tag*
+ Qflex specific, save uArch state as checkpoints on the disk.
+ The tag is a directory containing the checkpoint to load.
+ERST
+#endif
+#ifdef CONFIG_SNAPVM_EXT
+    {
+          .name       = "savevm-external",
+          .args_type  = "name:s?",
+          .params     = "tag",
+          .help       = "save a VM snapshot. If no tag is provided, a new snapshot is created",
+          .cmd        =  hmp_savevm_external
+    },
+SRST
+ ``savevm-external`` *tag*
+ QFLEX Specific, save an incremental snapshot externaly of the regular snapshot
+ format. The tag create a new directory which will make the furtur snapshot point
+ to the root backing file.
+ERST
+#endif
+#ifdef CONFIG_SNAPVM_EXT
+    {
+          .name       = "loadvm-external",
+          .args_type  = "name:s?",
+          .params     = "tag",
+          .help       = "restore a VM snapshot from its tag",
+          .cmd        =  hmp_loadvm_external
+    },
+SRST
+ ``loadvm-external`` *tag*
+ QFLEX Specific, load a snapshot from one of its tag.
+ERST
+#endif
 
     {
         .name       = "one-insn-per-tb",
@@ -1106,7 +1171,7 @@ ERST
 
 SRST
 ``dump-guest-memory [-p]`` *filename* *begin* *length*
-  \ 
+  \
 ``dump-guest-memory [-z|-l|-s|-w]`` *filename*
   Dump guest memory to *protocol*. The file can be processed with crash or
   gdb. Without ``-z|-l|-s|-w``, the dump format is ELF.
@@ -1874,4 +1939,5 @@ SRST
 ``xen-event-list``
   List event channels in the guest
 ERST
+
 #endif

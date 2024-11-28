@@ -1,0 +1,58 @@
+# -*- Mode: Python -*-
+# vim: filetype=python
+#
+
+
+##
+# @savevm-external:
+#
+# Make a incremental snapshot
+#
+#
+# Returns: nothing on success.
+#
+# Since: 8.2
+#
+##
+{ 'command': 'savevm-external'}
+
+##
+# @loadvm-external:
+#
+# Save an incremental snapshot
+#
+#
+# Returns: nothing on success.
+#
+# Since: 8.2
+#
+##
+{ 'command': 'loadvm-external'}
+
+##
+# @flexus-save-measure:
+#
+# Save Flexus stats on the disk
+#
+# @path: Diskpath to save the statistics directory
+#
+# Returns: nothing on success.
+#
+# Since: 8.2
+#
+##
+{ 'command': 'flexus-save-measure', 'data': {'*path':'str'} }
+
+##
+# @flexus-save-ckpt:
+#
+# Save Flexus checkpoint on the disk
+#
+# @path: Diskpath to save the ckpt directory
+#
+# Returns: nothing on success.
+#
+# Since: 8.2
+#
+##
+{ 'command': 'flexus-save-ckpt', 'data': {'*path':'str'} }

@@ -368,3 +368,23 @@ option('qemu_ga_version', type: 'string', value: '',
 
 option('hexagon_idef_parser', type : 'boolean', value : true,
        description: 'use idef-parser to automatically generate TCG code for the Hexagon frontend')
+
+# ______  ___  ______  _____  ___
+# | ___ \/ _ \ | ___ \/  ___|/ _ \
+# | |_/ / /_\ \| |_/ /\ `--./ /_\ \
+# |  __/|  _  ||    /  `--. \  _  |
+# | |   | | | || |\ \ /\__/ / | | |
+# \_|   \_| |_/\_| \_|\____/\_| |_/
+
+option('libqflex', type : 'feature', value : 'auto',
+       description: 'QFlex support')
+
+option('snapvm-external', type : 'feature', value : 'auto',
+       description: 'Support for external snapshot')
+
+#  ___  __ _ _ __ __ _ _ __
+# / __|/ _` | '__/ _` | '_ \
+# \__ \ (_| | | | (_| | |_) |
+# |___/\__,_|_|  \__,_| .__/
+#                     | |
+#                     |_|

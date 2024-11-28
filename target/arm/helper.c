@@ -934,7 +934,7 @@ static int64_t cycles_ns_per(uint64_t cycles)
 
 static bool instructions_supported(CPUARMState *env)
 {
-    return icount_enabled() == 1; /* Precise instruction counting */
+    return false;
 }
 
 static uint64_t instructions_get_count(CPUARMState *env)

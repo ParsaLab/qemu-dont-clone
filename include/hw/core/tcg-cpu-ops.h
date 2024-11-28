@@ -116,6 +116,10 @@ struct TCGCPUOps {
 #else
     /** @cpu_exec_interrupt: Callback for processing interrupts in cpu_exec */
     bool (*cpu_exec_interrupt)(CPUState *cpu, int interrupt_request);
+
+    /** @cpu_check_interrupt: Callback for checking interrupt for QFlex */
+    bool (*cpu_check_interrupt)(CPUState *cpu, int interrupt_request);
+
     /**
      * @tlb_fill: Handle a softmmu tlb miss
      *

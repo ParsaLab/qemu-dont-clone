@@ -383,15 +383,15 @@ DEF("numa", HAS_ARG, QEMU_OPTION_numa,
     QEMU_ARCH_ALL)
 SRST
 ``-numa node[,mem=size][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=initiator]``
-  \ 
+  \
 ``-numa node[,memdev=id][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=initiator]``
   \
 ``-numa dist,src=source,dst=destination,val=distance``
-  \ 
+  \
 ``-numa cpu,node-id=node[,socket-id=x][,core-id=y][,thread-id=z]``
-  \ 
+  \
 ``-numa hmat-lb,initiator=node,target=node,hierarchy=hierarchy,data-type=type[,latency=lat][,bandwidth=bw]``
-  \ 
+  \
 ``-numa hmat-cache,node-id=node,size=size,level=level[,associativity=str][,policy=str][,line=size]``
     Define a NUMA node and assign RAM and VCPUs to it. Set the NUMA
     distance from a source node to a destination node. Set the ACPI
@@ -593,7 +593,7 @@ DEF("global", HAS_ARG, QEMU_OPTION_global,
     QEMU_ARCH_ALL)
 SRST
 ``-global driver.prop=value``
-  \ 
+  \
 ``-global driver=driver,property=property,value=value``
     Set default value of driver's property prop to value, e.g.:
 
@@ -1239,9 +1239,9 @@ SRST
 ``-hda file``
   \
 ``-hdb file``
-  \ 
+  \
 ``-hdc file``
-  \ 
+  \
 ``-hdd file``
     Use file as hard disk 0, 1, 2 or 3 image on the default bus of the
     emulated machine (this is for example the IDE bus on most x86 machines,
@@ -1752,7 +1752,7 @@ DEF("fsdev", HAS_ARG, QEMU_OPTION_fsdev,
 
 SRST
 ``-fsdev local,id=id,path=path,security_model=security_model [,writeout=writeout][,readonly=on][,fmode=fmode][,dmode=dmode] [,throttling.option=value[,throttling.option=value[,...]]]``
-  \ 
+  \
 ``-fsdev proxy,id=id,socket=socket[,writeout=writeout][,readonly=on]``
   \
 ``-fsdev proxy,id=id,sock_fd=sock_fd[,writeout=writeout][,readonly=on]``
@@ -1875,9 +1875,9 @@ DEF("virtfs", HAS_ARG, QEMU_OPTION_virtfs,
 
 SRST
 ``-virtfs local,path=path,mount_tag=mount_tag ,security_model=security_model[,writeout=writeout][,readonly=on] [,fmode=fmode][,dmode=dmode][,multidevs=multidevs]``
-  \ 
+  \
 ``-virtfs proxy,socket=socket,mount_tag=mount_tag [,writeout=writeout][,readonly=on]``
-  \ 
+  \
 ``-virtfs proxy,sock_fd=sock_fd,mount_tag=mount_tag [,writeout=writeout][,readonly=on]``
   \
 ``-virtfs synth,mount_tag=mount_tag``
@@ -4399,7 +4399,7 @@ DEF("overcommit", HAS_ARG, QEMU_OPTION_overcommit,
     QEMU_ARCH_ALL)
 SRST
 ``-overcommit mem-lock=on|off``
-  \ 
+  \
 ``-overcommit cpu-pm=on|off``
     Run qemu with hints about host resource overcommit. The default is
     to assume that host overcommits all resources.
@@ -4753,7 +4753,7 @@ DEF("incoming", HAS_ARG, QEMU_OPTION_incoming, \
     QEMU_ARCH_ALL)
 SRST
 ``-incoming tcp:[host]:port[,to=maxport][,ipv4=on|off][,ipv6=on|off]``
-  \ 
+  \
 ``-incoming rdma:host:port[,ipv4=on|off][,ipv6=on|off]``
     Prepare for incoming migration, listen on a given tcp port.
 
@@ -5566,7 +5566,7 @@ SRST
                [...]
 
     ``-object secret,id=id,data=string,format=raw|base64[,keyid=secretid,iv=string]``
-      \ 
+      \
     ``-object secret,id=id,file=filename,format=raw|base64[,keyid=secretid,iv=string]``
         Defines a secret to store a password, encryption key, or some
         other sensitive data. The sensitive data can either be passed
@@ -5853,6 +5853,35 @@ SRST
             (qemu) qom-set /objects/iothread1 poll-max-ns 100000
 ERST
 
+DEFHEADING()
+DEFHEADING(Simulation backend:)
+
+#ifdef CONFIG_LIBQFLEX
+DEF("libqflex", HAS_ARG, QEMU_OPTION_libqflex,
+    "-libqflex	Start custom tracing toward libqflex\n",
+    QEMU_ARCH_ARM)
+SRST
+`` -libqflex		Start custom tracing toward libqflex``
+ERST
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+
+DEF("snapvm-external", HAS_ARG, QEMU_OPTION_snapvm_external,
+    "-snapvm-external [path]	Enable incremental non-blocking snapshot.\n",
+    QEMU_ARCH_ALL)
+SRST
+`` -snapvm-external	Save state from an external memory block``
+ERST
+
+DEF("loadvm-external", HAS_ARG, QEMU_OPTION_loadvm_external,
+    "-loadvm-external [name]	Load an external snapshot previously made with `savevm-external`\n",
+    QEMU_ARCH_ALL)
+SRST
+`` -loadvm-external [filename]	Load state from an external memory block``
+ERST
+
+#endif
 
 HXCOMM This is the last statement. Insert new options before this line!
 

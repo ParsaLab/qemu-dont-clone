@@ -125,7 +125,7 @@ static int64_t icount_get_locked(void)
 {
     int64_t icount = icount_get_raw_locked();
     return qatomic_read_i64(&timers_state.qemu_icount_bias) +
-        icount_to_ns(icount);
+        icount_to_ns(icount) + timers_state.virtual_clock_snapshot;
 }
 
 int64_t icount_get_raw(void)

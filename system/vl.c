@@ -134,6 +134,15 @@
 #include "qemu/guest-random.h"
 #include "qemu/keyval.h"
 
+#ifdef CONFIG_LIBQFLEX
+#include "middleware/libqflex/libqflex-module.h"
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+#include "middleware/snapvm-external/snapvm-external.h"
+#endif
+
+
 #define MAX_VIRTIO_CONSOLES 1
 
 typedef struct BlockdevOptionsQueueEntry {
@@ -2714,7 +2723,14 @@ void qmp_x_exit_preconfig(Error **errp)
     qemu_machine_creation_done();
 
     if (loadvm) {
+
+#ifdef CONFIG_SNAPVM_EXT
+    if (qemu_snapvm_state.is_load_enabled)
+        load_snapshot_external(loadvm, NULL, false, NULL, &error_fatal);
+    else
+#endif
         load_snapshot(loadvm, NULL, false, NULL, &error_fatal);
+
     }
     if (replay_mode != REPLAY_MODE_NONE) {
         replay_vmstate_init();
@@ -2776,6 +2792,15 @@ void qemu_init(int argc, char **argv)
     qemu_add_opts(&qemu_semihosting_config_opts);
     qemu_add_opts(&qemu_fw_cfg_opts);
     qemu_add_opts(&qemu_action_opts);
+
+#ifdef CONFIG_LIBQFLEX
+    qemu_add_opts(&qemu_libqflex_opts);
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+    qemu_add_opts(&qemu_snapvm_loadvm_opts);
+#endif
+
     qemu_add_run_with_opts();
     module_call_init(MODULE_INIT_OPTS);
 
@@ -3636,6 +3661,24 @@ void qemu_init(int argc, char **argv)
             }
 #endif /* CONFIG_POSIX */
 
+#ifdef CONFIG_LIBQFLEX
+            case QEMU_OPTION_libqflex:
+                libqflex_parse_opts(optarg);
+                break;
+#endif /* CONFIG_LIBQFLEX */
+
+#ifdef CONFIG_SNAPVM_EXT
+            case QEMU_OPTION_snapvm_external:
+                snapvm_external_parse_opts(optarg);
+                qemu_snapvm_state.is_save_enabled = true;
+                break;
+
+            case QEMU_OPTION_loadvm_external:
+                loadvm = optarg;
+                qemu_snapvm_state.is_load_enabled = true;
+                break;
+#endif
+
             default:
                 error_report("Option not supported in this build");
                 exit(1);
@@ -3764,4 +3807,20 @@ void qemu_init(int argc, char **argv)
     accel_setup_post(current_machine);
     os_setup_post();
     resume_mux_open();
+
+#ifdef CONFIG_LIBQFLEX
+    /**
+     *
+     * Bryan Perdrizat
+     *      Previous developers seem to have put the initialisation
+     *      of (lib)QFlex at the very end of the main initialisation (right there).
+     *      I leave it it here, unaware of its past whereabouts.
+     */
+    libqflex_init();
+
+#endif
+
+#ifdef CONFIG_SNAPVM_EXT
+    snapvm_init();
+#endif
 }

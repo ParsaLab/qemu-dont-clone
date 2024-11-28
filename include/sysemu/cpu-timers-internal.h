@@ -52,6 +52,9 @@ typedef struct TimersState {
     int64_t vm_clock_warp_start;
     int64_t cpu_clock_offset;
 
+    /* Add by Cyan. the vm_clock from the recent snapshot */
+    int64_t virtual_clock_snapshot;
+
     /* Only written by TCG thread */
     int64_t qemu_icount;
 

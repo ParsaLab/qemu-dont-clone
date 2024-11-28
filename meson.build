@@ -1784,6 +1784,8 @@ if not get_option('libpmem').auto() or have_system
   libpmem = dependency('libpmem', required: get_option('libpmem'),
                        method: 'pkg-config')
 endif
+
+
 libdaxctl = not_found
 if not get_option('libdaxctl').auto() or have_system
   libdaxctl = dependency('libdaxctl', required: get_option('libdaxctl'),
@@ -1927,6 +1929,44 @@ if not get_option('libdw').auto() or \
                        method: 'pkg-config',
                        required: get_option('libdw'))
 endif
+
+# ______  ___  ______  _____  ___
+# | ___ \/ _ \ | ___ \/  ___|/ _ \
+# | |_/ / /_\ \| |_/ /\ `--./ /_\ \
+# |  __/|  _  ||    /  `--. \  _  |
+# | |   | | | || |\ \ /\__/ / | | |
+# \_|   \_| |_/\_| \_|\____/\_| |_/
+
+middleware_include = false
+middleware_dep = {}
+middleware_option = {
+  'libqflex': [],
+  'snapvm-external': [],
+}
+
+foreach name, dep: middleware_option
+
+  # If the option are not explicitly enabled
+  if not get_option(name).enabled()
+    middleware_dep += {name: not_found}
+    continue
+  endif
+
+  if fs.is_dir('middleware/' + name)
+    # Modify the dictionary directly to set the value for the current key
+    middleware_dep += {name: declare_dependency(dependencies: dep)}
+    middleware_include = true
+  else
+    error('Middleware directory (' + name + ') was not found in "./middleware/"')
+  endif
+endforeach
+
+#  ___  __ _ _ __ __ _ _ __
+# / __|/ _` | '__/ _` | '_ \
+# \__ \ (_| | | | (_| | |_) |
+# |___/\__,_|_|  \__,_| .__/
+#                     | |
+#                     |_|
 
 #################
 # config-host.h #
@@ -2155,6 +2195,7 @@ config_host_data.set('CONFIG_LIBSSH', libssh.found())
 config_host_data.set('CONFIG_LINUX_AIO', libaio.found())
 config_host_data.set('CONFIG_LINUX_IO_URING', linux_io_uring.found())
 config_host_data.set('CONFIG_LIBPMEM', libpmem.found())
+config_host_data.set('CONFIG_LIBQFLEX', middleware_dep['libqflex'].found())
 config_host_data.set('CONFIG_MODULES', enable_modules)
 config_host_data.set('CONFIG_NUMA', numa.found())
 if numa.found()
@@ -2168,6 +2209,7 @@ config_host_data.set('CONFIG_RBD', rbd.found())
 config_host_data.set('CONFIG_RDMA', rdma.found())
 config_host_data.set('CONFIG_RELOCATABLE', get_option('relocatable'))
 config_host_data.set('CONFIG_SAFESTACK', get_option('safe_stack'))
+config_host_data.set('CONFIG_SNAPVM_EXT', middleware_dep['snapvm-external'].found())
 config_host_data.set('CONFIG_SDL', sdl.found())
 config_host_data.set('CONFIG_SDL_IMAGE', sdl_image.found())
 config_host_data.set('CONFIG_SECCOMP', seccomp.found())
@@ -3272,6 +3314,7 @@ trace_events_subdirs = [
   'crypto',
   'qapi',
   'qom',
+  'middleware',
   'monitor',
   'util',
   'gdbstub',
@@ -3401,6 +3444,18 @@ subdir('crypto')
 subdir('ui')
 subdir('hw')
 subdir('gdbstub')
+
+#  __        __   __
+# |__)  /\  |__) /__`  /\
+# |    /~~\ |  \ .__/ /~~\
+#! This has to be exactly here, otherwise the object
+#! accessed in middleware/meson.build won't exist (anymore)
+
+if middleware_include
+  subdir('middleware')
+endif
+
+
 
 if enable_modules
   libmodulecommon = static_library('module-common', files('module-common.c') + genh, pic: true, c_args: '-DBUILD_DSO')
@@ -3532,9 +3587,10 @@ specific_ss.add_all(when: 'CONFIG_TCG_BUILTIN', if_true: tcg_module_ss)
 target_modules += { 'accel' : { 'qtest': qtest_module_ss,
                                 'tcg': tcg_real_module_ss }}
 
-########################
-# Library dependencies #
-########################
+
+##############################################
+# Internal static_libraries and dependencies #
+##############################################
 
 modinfo_collect = find_program('scripts/modinfo-collect.py')
 modinfo_generate = find_program('scripts/modinfo-generate.py')
@@ -4396,7 +4452,10 @@ summary_info += {'libudev':           libudev}
 summary_info += {'FUSE lseek':        fuse_lseek.found()}
 summary_info += {'selinux':           selinux}
 summary_info += {'libdw':             libdw}
+
 summary(summary_info, bool_yn: true, section: 'Dependencies')
+summary(middleware_dep, bool_yn: true, section: 'PARSA')
+
 
 if host_arch == 'unknown'
   message()

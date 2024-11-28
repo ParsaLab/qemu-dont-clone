@@ -136,6 +136,7 @@ meson_options_help() {
   printf "%s\n" '  libkeyutils     Linux keyutils support'
   printf "%s\n" '  libnfs          libnfs block device driver'
   printf "%s\n" '  libpmem         libpmem support'
+  printf "%s\n" '  libqflex        QFlex support'
   printf "%s\n" '  libssh          ssh block device support'
   printf "%s\n" '  libudev         Use libudev to enumerate host devices'
   printf "%s\n" '  libusb          libusb support for USB passthrough'
@@ -179,6 +180,7 @@ meson_options_help() {
   printf "%s\n" '  slirp-smbd      use smbd (at path --smbd=*) in slirp networking'
   printf "%s\n" '  smartcard       CA smartcard emulation support'
   printf "%s\n" '  snappy          snappy compression support'
+  printf "%s\n" '  snapvm-external Support for external snapshot'
   printf "%s\n" '  sndio           sndio sound support'
   printf "%s\n" '  sparse          sparse checker'
   printf "%s\n" '  spice           Spice server support'
@@ -368,6 +370,8 @@ _meson_option_parse() {
     --disable-libnfs) printf "%s" -Dlibnfs=disabled ;;
     --enable-libpmem) printf "%s" -Dlibpmem=enabled ;;
     --disable-libpmem) printf "%s" -Dlibpmem=disabled ;;
+    --enable-libqflex) printf "%s" -Dlibqflex=enabled ;;
+    --disable-libqflex) printf "%s" -Dlibqflex=disabled ;;
     --enable-libssh) printf "%s" -Dlibssh=enabled ;;
     --disable-libssh) printf "%s" -Dlibssh=disabled ;;
     --enable-libudev) printf "%s" -Dlibudev=enabled ;;
@@ -476,6 +480,8 @@ _meson_option_parse() {
     --smbd=*) quote_sh "-Dsmbd=$2" ;;
     --enable-snappy) printf "%s" -Dsnappy=enabled ;;
     --disable-snappy) printf "%s" -Dsnappy=disabled ;;
+    --enable-snapvm-external) printf "%s" -Dsnapvm-external=enabled ;;
+    --disable-snapvm-external) printf "%s" -Dsnapvm-external=disabled ;;
     --enable-sndio) printf "%s" -Dsndio=enabled ;;
     --disable-sndio) printf "%s" -Dsndio=disabled ;;
     --enable-sparse) printf "%s" -Dsparse=enabled ;;

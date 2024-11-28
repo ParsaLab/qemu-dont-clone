@@ -109,6 +109,14 @@ void cpu_enable_ticks(void)
     seqlock_write_lock(&timers_state.vm_clock_seqlock,
                        &timers_state.vm_clock_lock);
     if (!timers_state.cpu_ticks_enabled) {
+        timers_state.virtual_clock_snapshot = timers_state.cpu_clock_offset;
+
+        if (icount_enabled()) {
+            // well, we have adjust the virtual_clock_snapshot time, so we should clean the current icount.
+            // by assigning offset, we cancel the value of the current icount. 
+            timers_state.qemu_icount_bias = - icount_to_ns(timers_state.qemu_icount);
+        }
+
         timers_state.cpu_ticks_offset -= cpu_get_host_ticks();
         timers_state.cpu_clock_offset -= get_clock();
         timers_state.cpu_ticks_enabled = 1;
@@ -128,7 +136,16 @@ void cpu_disable_ticks(void)
                        &timers_state.vm_clock_lock);
     if (timers_state.cpu_ticks_enabled) {
         timers_state.cpu_ticks_offset += cpu_get_host_ticks();
-        timers_state.cpu_clock_offset = cpu_get_clock_locked();
+
+        if (icount_enabled()) {
+            // record the current time calculated with icount.
+            int64_t current_system_time = icount_to_ns(timers_state.qemu_icount) + timers_state.qemu_icount_bias + timers_state.virtual_clock_snapshot;
+            timers_state.cpu_clock_offset = current_system_time; // record it to the snapshot.
+        } else {
+            // record the CPU time.
+            timers_state.cpu_clock_offset = cpu_get_clock_locked();
+        }
+
         timers_state.cpu_ticks_enabled = 0;
     }
     seqlock_write_unlock(&timers_state.vm_clock_seqlock,
@@ -137,7 +154,7 @@ void cpu_disable_ticks(void)
 
 static bool icount_state_needed(void *opaque)
 {
-    return icount_enabled();
+    return false;
 }
 
 static bool warp_timer_state_needed(void *opaque)

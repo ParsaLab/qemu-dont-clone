@@ -168,6 +168,37 @@ static uint64_t xorshift64star(uint64_t x)
     return x * UINT64_C(2685821657736338717);
 }
 
+/**
+ * Author:
+ *      Yuanlong Li
+ *  Load plugin internally, instead of using the -plugin command line.
+ */
+qemu_plugin_id_t qemu_plugin_register_builtin(void) {
+    struct qemu_plugin_ctx *ctx;
+
+    ctx = qemu_memalign(qemu_dcache_linesize, sizeof(*ctx));
+    memset(ctx, 0, sizeof(*ctx));
+
+    qemu_rec_mutex_lock(&plugin.lock);
+
+    /* find an unused random id with &ctx as the seed */
+    ctx->id = (uint64_t)(uintptr_t)(ctx);
+
+    for (;;) {
+        ctx->id = xorshift64star(ctx->id);
+
+        if (likely(g_hash_table_lookup(plugin.id_ht, &ctx->id) == NULL)) {
+            g_assert(g_hash_table_insert(plugin.id_ht, &ctx->id, &ctx->id));
+            break;
+        }
+
+        QTAILQ_INSERT_TAIL(&plugin.ctxs, ctx, entry);
+    }
+
+    qemu_rec_mutex_unlock(&plugin.lock);
+    return ctx->id;
+}
+
 /*
  * Disable CFI checks.
  * The install and version functions have been loaded from an external library

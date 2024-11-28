@@ -43,3 +43,7 @@
 [submodule "tests/lcitool/libvirt-ci"]
 	path = tests/lcitool/libvirt-ci
 	url = https://gitlab.com/libvirt/libvirt-ci.git
+[submodule "libqflex"]
+	path = middleware
+	url = https://github.com/parsa-epfl/libqflex.git
+	branch = next

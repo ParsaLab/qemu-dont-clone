@@ -59,6 +59,7 @@ if have_system
     'acpi',
     'audio',
     'cryptodev',
+    'middleware',
     'qdev',
     'pci',
     'rdma',
