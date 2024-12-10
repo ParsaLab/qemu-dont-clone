@@ -76,6 +76,9 @@ bool ramblock_page_is_discarded(RAMBlock *rb, ram_addr_t start);
 void postcopy_preempt_shutdown_file(MigrationState *s);
 void *postcopy_preempt_thread(void *opaque);
 
+
+int ram_load(QEMUFile *f, void *opaque, int version_id);
+
 /* ram cache */
 int colo_init_ram_cache(void);
 void colo_flush_ram_cache(void);

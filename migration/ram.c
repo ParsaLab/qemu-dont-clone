@@ -4027,7 +4027,7 @@ static int ram_load_precopy(QEMUFile *f)
     return ret;
 }
 
-static int ram_load(QEMUFile *f, void *opaque, int version_id)
+int ram_load(QEMUFile *f, void *opaque, int version_id)
 {
     int ret = 0;
     static uint64_t seq_iter;
@@ -4302,7 +4302,10 @@ static RAMBlockNotifier ram_mig_ram_notifier = {
 
 void ram_mig_init(void)
 {
-    qemu_mutex_init(&XBZRLE.lock);
-    register_savevm_live("ram", 0, 4, &savevm_ram_handlers, &ram_state);
-    ram_block_notifier_add(&ram_mig_ram_notifier);
+    // TODO add a flag to start without ram
+    (void)savevm_ram_handlers;
+    (void)ram_mig_ram_notifier;
+   // qemu_mutex_init(&XBZRLE.lock);
+   // register_savevm_live("ram", 0, 4, &savevm_ram_handlers, &ram_state);
+   // ram_block_notifier_add(&ram_mig_ram_notifier);
 }
