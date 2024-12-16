@@ -717,4 +717,17 @@ uint64_t qemu_plugin_end_code(void);
 QEMU_PLUGIN_API
 uint64_t qemu_plugin_entry_code(void);
 
+/**
+ * typedef qemu_plugin_io_mem_cb_t - memory callback function type
+ * @bdf: BDF of the IO device
+ * @vaddr: the virtual address of the transaction
+ * @userdata: any user data attached to the callback
+ */
+typedef void (*qemu_plugin_io_mem_cb_t) (unsigned int bdf,
+                                           uint64_t vaddr,
+                                           void *userdata);
+
+QEMU_PLUGIN_API
+void qemu_plugin_register_io_mem_cb(qemu_plugin_io_mem_cb_t cb);
+
 #endif /* QEMU_QEMU_PLUGIN_H */

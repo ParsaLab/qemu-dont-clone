@@ -44,6 +44,8 @@
 #include "hw/net/mii.h"
 #include "hw/pci/msi.h"
 #include "hw/pci/msix.h"
+#include "qemu/qemu-plugin.h"
+#include "qemu/typedefs.h"
 #include "sysemu/runstate.h"
 
 #include "net_tx_pkt.h"
@@ -89,6 +91,12 @@ typedef struct PTP2 {
     uint8_t control;
     uint8_t log_message_period;
 } PTP2;
+
+static inline uint64_t igb_get_mmio_bar (IGBCore * core) {
+    PCIDevice *pci_device = core->owner;
+    uint64_t BAR = pci_device->io_regions[0].addr; // Region 0 is the MMIO region
+    return BAR;
+}
 
 static ssize_t
 igb_receive_internal(IGBCore *core, const struct iovec *iov, int iovcnt,
@@ -721,6 +729,8 @@ igb_ring_head_descr(IGBCore *core, const E1000ERingInfo *r)
     return igb_ring_base(core, r) + E1000_RING_DESC_LEN * core->mac[r->dh];
 }
 
+extern qemu_plugin_io_mem_cb_t io_mem_cb;
+
 static inline void
 igb_ring_advance(IGBCore *core, const E1000ERingInfo *r, uint32_t count)
 {
@@ -729,6 +739,8 @@ igb_ring_advance(IGBCore *core, const E1000ERingInfo *r, uint32_t count)
     if (core->mac[r->dh] * E1000_RING_DESC_LEN >= core->mac[r->dlen]) {
         core->mac[r->dh] = 0;
     }
+    // TODO: Do not hardcode BDF!
+    io_mem_cb (0x8, igb_get_mmio_bar(core) + (RDH0_A << 2) , &core->mac[r->dh]);
 }
 
 static inline uint32_t

@@ -97,4 +97,5 @@ void plugin_register_vcpu_mem_cb(GArray **arr,
 
 void exec_inline_op(struct qemu_plugin_dyn_cb *cb);
 
+extern qemu_plugin_io_mem_cb_t io_mem_cb;
 #endif /* PLUGIN_H */

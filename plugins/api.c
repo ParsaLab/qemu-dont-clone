@@ -427,3 +427,10 @@ uint64_t qemu_plugin_entry_code(void)
 #endif
     return entry;
 }
+
+qemu_plugin_io_mem_cb_t io_mem_cb = NULL;
+
+void qemu_plugin_register_io_mem_cb (qemu_plugin_io_mem_cb_t cb) {
+    assert(io_mem_cb == NULL);
+    io_mem_cb = cb;
+}
