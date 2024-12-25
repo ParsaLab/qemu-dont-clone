@@ -972,7 +972,7 @@ qemu_plugin_register_periodic_check_cb(qemu_plugin_periodic_check_cb_t cb);
  */
 CYAN_API uint64_t qemu_plugin_get_vcpu_vtime(uint32_t cpu_idx);
 CYAN_API void qemu_plugin_set_vcpu_vtime(uint32_t cpu_idx, uint64_t vtime);
-CYAN_API uint64_t qemu_plugin_get_vcpu_ipc(uint32_t cpu_idx);
+CYAN_API uint64_t qemu_plugin_get_vcpu_ip10ps(uint32_t cpu_idx);
 
 CYAN_API uint64_t qemu_plugin_cpu_get_next_deadline(uint32_t cpu_index);
 

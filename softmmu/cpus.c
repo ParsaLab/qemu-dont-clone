@@ -456,7 +456,7 @@ uint64_t qemu_wait_io_event(CPUState *cpu, bool not_running_yet, uint32_t *curre
         // I need to calculate the number of host miliseconds that I have been sleeping.
 
         if (runstate_is_running()) {
-            bool affiliated_with_quantum = cpu->ipc != 0 && quantum_enabled();
+            bool affiliated_with_quantum = cpu->ip10ps != 0 && quantum_enabled();
             if (affiliated_with_quantum) {
 
                 assert(cpu->cb_next_timer_interrupt_time != NULL);
@@ -468,7 +468,7 @@ uint64_t qemu_wait_io_event(CPUState *cpu, bool not_running_yet, uint32_t *curre
                     // We immediately go to the quantum barrier.
                     cpu->quantum_budget = 0;
                 } else {
-                    cpu->quantum_budget -= next_deadline * cpu->ipc;
+                    cpu->quantum_budget -= (next_deadline * cpu->ip10ps) / 100;
                 }
 
                 if (cpu->quantum_budget <= 0) {

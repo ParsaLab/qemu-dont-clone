@@ -47,7 +47,7 @@
 dynamic_barrier_polling_t quantum_barrier;
 
 typedef struct core_meta_info_t {
-    uint64_t ipc;
+    uint64_t ip10ps;
     uint64_t affinity_core_idx;
 } core_meta_info_t;
 
@@ -56,7 +56,7 @@ static core_meta_info_t core_info_table[256];
 void mttcg_initialize_core_info_table(const char *file_name) {
     // By default, all cores' IPC is 0, which means not managed by the IPC and the quantum.
     for(uint64_t i = 0; i < 256; ++i) {
-        core_info_table[i].ipc = 0;
+        core_info_table[i].ip10ps = 0;
         core_info_table[i].affinity_core_idx = i;
     }
 
@@ -80,14 +80,15 @@ void mttcg_initialize_core_info_table(const char *file_name) {
     // The header is "ipc,affinity_core_idx"
     // do a comparison with the header.
     assert(fgets(line, 1024, fp) != NULL);
-    assert(strcmp(line, "ipc,affinity_core_idx\n") == 0);    
+    assert(strcmp(line, "ip10ps,affinity_core_idx\n") == 0);    
 
 
     // Now, read every line and fill the structure.
     while(fgets(line, 1024, fp) != NULL) {
         char *token = strtok(line, ",");
-        core_info_table[core_id].ipc = atoi(token);
-        assert(core_info_table[core_id].ipc > 0 && "IPC should be greater than 0");
+        double ipc = strtod(token, NULL);
+        core_info_table[core_id].ip10ps = (uint64_t)(ipc * 100);
+        assert(core_info_table[core_id].ip10ps > 0 && "IPC should be greater than 0");
         token = strtok(NULL, ",");
         core_info_table[core_id].affinity_core_idx = atoi(token);
         core_id += 1;
@@ -182,7 +183,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
     MttcgForceRcuNotifier force_rcu;
     CPUState *cpu = arg;
 
-    cpu->ipc = core_info_table[cpu->cpu_index].ipc;
+    cpu->ip10ps = core_info_table[cpu->cpu_index].ip10ps;
 
     assert(tcg_enabled());
     g_assert(!icount_enabled());
@@ -220,7 +221,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
 
     bool not_running_yet = true;
 
-    bool affiliated_with_quantum = cpu->ipc && quantum_enabled();
+    bool affiliated_with_quantum = cpu->ip10ps && quantum_enabled();
 
     // uint64_t dumping_threshold = 300 * 1000 * 1000; // 300M
 
@@ -237,11 +238,13 @@ static void *mttcg_cpu_thread_fn(void *arg)
                 // register the current thread to the barrier.
                 if (affiliated_with_quantum) {
                     cpu->quantum_generation = dynamic_barrier_polling_increase_by_1(&quantum_barrier);
-                    cpu->quantum_budget = quantum_size * cpu->ipc;
+                    cpu->quantum_budget = (quantum_size * cpu->ip10ps) / 100;
+                    assert(cpu->quantum_budget > 0); 
                     cpu->quantum_required = 0;
                     cpu->quantum_budget_depleted = 0;
 
-                    qemu_log("Core%u Quantum Count: %lu cycles, %lu instructions \n", cpu->cpu_index, quantum_size, quantum_size * cpu->ipc);
+
+                    qemu_log("Core%u Quantum Count: %lu cycles, %lu instructions \n", cpu->cpu_index, quantum_size, quantum_size * cpu->ip10ps);
                 }
 
                 // initialize the quantum budget.
@@ -264,7 +267,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
             
                         
                         assert(new_generation == old_generation + 1);
-                        cpu->quantum_budget += quantum_size * cpu->ipc;
+                        cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                         cpu->quantum_generation = new_generation;
 
                         if (stop_request) {
@@ -306,7 +309,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
             
                         
                         assert(new_generation == old_generation + 1);
-                        cpu->quantum_budget += quantum_size * cpu->ipc;
+                        cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                         cpu->quantum_generation = new_generation;
 
                         if (stop_request) {
@@ -340,7 +343,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
                     uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
         
                     assert(new_generation == old_generation + 1);
-                    cpu->quantum_budget += quantum_size * cpu->ipc;
+                    cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                     cpu->quantum_generation = new_generation;
 
                     if (stop_request) {

@@ -21,7 +21,7 @@ void HELPER(deduce_quantum)(CPUArchState *env) {
 
     // increase the target cycle.
     uint64_t current_index = current_cpu->cpu_index;
-    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 100 / current_cpu->ipc;
+    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 10000 / current_cpu->ip10ps;
 
     current_cpu->quantum_required = 0;
 
@@ -31,7 +31,7 @@ uint32_t HELPER(check_and_deduce_quantum)(CPUArchState *env) {
     assert(quantum_enabled());
     assert(current_cpu->env_ptr == env);
 
-    if (current_cpu->ipc == 0) {
+    if (current_cpu->ip10ps == 0) {
         return false;
     }
 
@@ -42,7 +42,7 @@ uint32_t HELPER(check_and_deduce_quantum)(CPUArchState *env) {
 
     // increase the target cycle.
     uint64_t current_index = current_cpu->cpu_index;
-    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 100 / current_cpu->ipc;
+    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 10000 / current_cpu->ip10ps;
 
     current_cpu->quantum_required = 0;
     
@@ -62,7 +62,7 @@ void HELPER(increase_target_cycle)(CPUArchState *env) {
     assert(icount_enabled());
 
     uint64_t current_index = current_cpu->cpu_index;
-    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 100 / current_cpu->ipc;
+    cpu_virtual_time[current_index].vts += current_cpu->quantum_required * 10000 / current_cpu->ip10ps;
 
     current_cpu->quantum_required = 0;
 }

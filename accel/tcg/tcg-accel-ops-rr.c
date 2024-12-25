@@ -173,7 +173,7 @@ static int rr_cpu_count(void)
 }
 
 typedef struct core_meta_info_t {
-    uint64_t ipc;
+    uint64_t ip10ps;
     uint64_t affinity_core_idx;
 } core_meta_info_t;
 
@@ -181,7 +181,7 @@ static core_meta_info_t core_info_table[256];
 
 static void rrtcg_initialize_core_info_table(const char *file_name) {
     for(uint64_t i = 0; i < 256; ++i) {
-        core_info_table[i].ipc = 0;
+        core_info_table[i].ip10ps = 0;
         core_info_table[i].affinity_core_idx = i;
     }
 
@@ -204,17 +204,19 @@ static void rrtcg_initialize_core_info_table(const char *file_name) {
     // The header is "ipc,affinity_core_idx"
     // do a comparison with the header.
     assert(fgets(line, 1024, fp) != NULL);
-    assert(strcmp(line, "ipc,affinity_core_idx\n") == 0);    
+    assert(strcmp(line, "ip10ps,affinity_core_idx\n") == 0);    
 
 
     // Now, read every line and fill the structure.
     while(fgets(line, 1024, fp) != NULL) {
         char *token = strtok(line, ",");
-        core_info_table[core_id].ipc = atoi(token);
-        assert(core_info_table[core_id].ipc > 0 && "IPC should be greater than 0");
+        double ipc = strtod(token, NULL);
+        core_info_table[core_id].ip10ps = (uint64_t)(ipc * 100);
+        assert(core_info_table[core_id].ip10ps > 0 && "IPC should be greater than 0");
         token = strtok(NULL, ",");
         core_info_table[core_id].affinity_core_idx = atoi(token);
         core_id += 1;
+        printf("core_id: %d, ipc: %f, affinity_core_idx: %ld\n", core_id, ipc, core_info_table[core_id].affinity_core_idx);
     }
 
     fclose(fp);
@@ -262,7 +264,7 @@ static void *rr_cpu_thread_fn(void *arg)
             qemu_wait_io_event_common(cpu);
 
             // Set up the ipc value for this processor.
-            cpu->ipc = core_info_table[cpu->cpu_index].ipc;
+            cpu->ip10ps = core_info_table[cpu->cpu_index].ip10ps;
 
             // No quantum is required at the beginning.
             cpu->quantum_required = 0;
@@ -329,7 +331,7 @@ static void *rr_cpu_thread_fn(void *arg)
             for (int i = 0; i < rr_cpu_count(); i++) {
                 CPUState *cpu = first_cpu;
                 while (cpu) {
-                    cpu_virtual_time[cpu->cpu_index].vts += cpu->quantum_required * 100 / cpu->ipc;
+                    cpu_virtual_time[cpu->cpu_index].vts += cpu->quantum_required * 10000 / cpu->ip10ps;
                     cpu->quantum_required = 0;
                     cpu = CPU_NEXT(cpu);
                 }
@@ -368,7 +370,9 @@ static void *rr_cpu_thread_fn(void *arg)
 
                 qemu_mutex_unlock_iothread();
                 if (icount_enabled()) {
-                    icount_prepare_for_run(cpu, cpu_budget * core_info_table[cpu->cpu_index].ipc);
+                    uint64_t icount = (cpu_budget * core_info_table[cpu->cpu_index].ip10ps) / 100;
+                    assert(icount > 0);
+                    icount_prepare_for_run(cpu, icount);
                 }
                 r = tcg_cpus_exec(cpu);
                 if (icount_enabled()) {
