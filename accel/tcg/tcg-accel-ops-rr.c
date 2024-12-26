@@ -204,7 +204,7 @@ static void rrtcg_initialize_core_info_table(const char *file_name) {
     // The header is "ipc,affinity_core_idx"
     // do a comparison with the header.
     assert(fgets(line, 1024, fp) != NULL);
-    assert(strcmp(line, "ip10ps,affinity_core_idx\n") == 0);    
+    assert(strcmp(line, "ipns,affinity_core_idx\n") == 0);    
 
 
     // Now, read every line and fill the structure.
