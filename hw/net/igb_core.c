@@ -56,6 +56,7 @@
 #include "igb_core.h"
 
 #include "trace.h"
+#include <string.h>
 
 #define E1000E_MAX_TX_FRAGS (64)
 
@@ -676,6 +677,8 @@ igb_process_tx_desc(IGBCore *core,
                 e1000x_timestamp(core->mac, core->timadj, TXSTMPL, TXSTMPH);
             }
 
+            trace_igb_tx_desc_buff_write((void *)buffer_addr, length);
+
             if (igb_tx_pkt_send(core, tx, queue_index)) {
                 igb_on_tx_done_update_stats(core, tx->tx_pkt, queue_index);
             }
@@ -739,8 +742,26 @@ igb_ring_advance(IGBCore *core, const E1000ERingInfo *r, uint32_t count)
     if (core->mac[r->dh] * E1000_RING_DESC_LEN >= core->mac[r->dlen]) {
         core->mac[r->dh] = 0;
     }
+}
+
+static inline void
+igb_ring_advance_cb(IGBCore *core, const E1000ERingInfo *r, uint32_t count, union e1000_rx_desc_union read_desc, union e1000_rx_desc_union wb_desc)
+{
+    core->mac[r->dh] += count;
+
+    if (core->mac[r->dh] * E1000_RING_DESC_LEN >= core->mac[r->dlen]) {
+        core->mac[r->dh] = 0;
+    }
+
+    char userdata[sizeof(core->mac[r->dh]) + sizeof(read_desc) + sizeof(wb_desc)];
+
+
+    memcpy(&userdata[0], &core->mac[r->dh], sizeof(uint32_t));
+    memcpy(&userdata[sizeof(uint32_t)], &read_desc, sizeof(read_desc));
+    memcpy(&userdata[sizeof(uint32_t) + sizeof(read_desc)], &wb_desc, sizeof(wb_desc));
+
     // TODO: Do not hardcode BDF!
-    io_mem_cb (0x8, igb_get_mmio_bar(core) + (RDH0_A << 2) , &core->mac[r->dh]);
+    io_mem_cb (0x8, igb_get_mmio_bar(core) + (RDH0_A << 2) , (void *)userdata);
 }
 
 static inline uint32_t
@@ -1912,6 +1933,8 @@ igb_write_packet_to_guest(IGBCore *core, struct NetRxPkt *pkt,
     PCIDevice *d;
     dma_addr_t base;
     union e1000_rx_desc_union desc;
+    union e1000_rx_desc_union read_desc;
+    union e1000_rx_desc_union wb_desc;
     const E1000ERingInfo *rxi;
     size_t rx_desc_len;
 
@@ -1946,6 +1969,8 @@ igb_write_packet_to_guest(IGBCore *core, struct NetRxPkt *pkt,
 
         igb_read_rx_descr(core, &desc, &pdma_st, rxi);
 
+        read_desc = desc;
+
         igb_write_to_rx_buffers(core, pkt, d, &pdma_st);
         pdma_st.desc_offset += pdma_st.desc_size;
         if (pdma_st.desc_offset >= pdma_st.total_size) {
@@ -1959,7 +1984,10 @@ igb_write_packet_to_guest(IGBCore *core, struct NetRxPkt *pkt,
                            &pdma_st,
                            rxi);
         igb_pci_dma_write_rx_desc(core, d, base, &desc, rx_desc_len);
-        igb_ring_advance(core, rxi, rx_desc_len / E1000_MIN_RX_DESC_LEN);
+
+        wb_desc = desc;
+
+        igb_ring_advance_cb(core, rxi, rx_desc_len / E1000_MIN_RX_DESC_LEN, read_desc, wb_desc);
     } while (pdma_st.desc_offset < pdma_st.total_size);
 
     igb_update_rx_stats(core, rxi, pdma_st.size, pdma_st.total_size);
