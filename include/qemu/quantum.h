@@ -11,12 +11,12 @@ typedef enum thread_quamtum_state_t {
 } thread_quantum_state_t;
 
 typedef struct quamtum_per_thread_data_t {
-    uint64_t ip10ps;  // the number of instruction per 10ps, used to convert the credit unit between time and instruction.
+    uint64_t ip100ns;  // the number of instruction per 10ps, used to convert the credit unit between time and instruction.
     int64_t credit; // in the number of instructions. 
-    int64_t credit_in_time; // in the unit of time. This member is only calculated before a suspended thread enters the quantum barrier. 
-    uint64_t most_recent_deadline_in_virtual_time; // the most recent deadline in QEMU virtual time. This member is only calculated before a suspended thread enters the quantum barrier.
+    int64_t credit_in_10ps; // in the unit of time. This member is only calculated before a suspended thread enters the quantum barrier. 
     uint64_t generation;                           // which generation the thread is in.
 
+    // The following two members are used by the TCG plugin.
     uint64_t credit_required; // the number of credit required to run the next quantum.
     uint64_t credit_depleted; // whether the credit is depleted or not.
 } quantum_per_thread_data_t;
@@ -45,6 +45,9 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
 
 // This function is called when the thread depletes its credit.
 void quantum_recharge(int64_t upto, quantum_per_thread_data_t *per_thread_data);
+
+// This function is called when the thread enters the suspended mode. 
+void quantum_suspend(quantum_per_thread_data_t *per_thread_data);
 
 typedef struct ipi_time_adjustment_request_t {
     uint64_t is_valid;

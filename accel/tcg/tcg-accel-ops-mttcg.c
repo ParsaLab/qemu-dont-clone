@@ -25,7 +25,6 @@
 
 #include "qemu/osdep.h"
 #include "sysemu/tcg.h"
-#include "qemu/plugin-cyan.h"
 #include "qemu/typedefs.h"
 #include "sysemu/replay.h"
 #include "sysemu/cpu-timers.h"
@@ -39,13 +38,12 @@
 #include "tcg-accel-ops-mttcg.h"
 #include "qemu/log-for-trace.h"
 
-#include "qemu/dynamic_barrier.h"
 #include "qemu/quantum.h"
 #include "sysemu/quantum.h"
 #include <stdio.h>
 
 typedef struct core_meta_info_t {
-    uint64_t ip10ps;
+    uint64_t ip100ns;
     uint64_t affinity_core_idx;
 } core_meta_info_t;
 
@@ -54,7 +52,7 @@ static core_meta_info_t core_info_table[256];
 void mttcg_initialize_core_info_table(const char *file_name) {
     // By default, all cores' IPC is 0, which means not managed by the IPC and the quantum.
     for(uint64_t i = 0; i < 256; ++i) {
-        core_info_table[i].ip10ps = 0;
+        core_info_table[i].ip100ns = 0;
         core_info_table[i].affinity_core_idx = i;
     }
 
@@ -85,8 +83,8 @@ void mttcg_initialize_core_info_table(const char *file_name) {
     while(fgets(line, 1024, fp) != NULL) {
         char *token = strtok(line, ",");
         double ipc = strtod(token, NULL);
-        core_info_table[core_id].ip10ps = (uint64_t)(ipc * 100);
-        assert(core_info_table[core_id].ip10ps > 0 && "IPC should be greater than 0");
+        core_info_table[core_id].ip100ns = (uint64_t)(ipc * 100);
+        assert(core_info_table[core_id].ip100ns > 0 && "IPC should be greater than 0");
         token = strtok(NULL, ",");
         core_info_table[core_id].affinity_core_idx = atoi(token);
         core_id += 1;
@@ -181,7 +179,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
     MttcgForceRcuNotifier force_rcu;
     CPUState *cpu = arg;
 
-    cpu->quantum_data.ip10ps = core_info_table[cpu->cpu_index].ip10ps;
+    cpu->quantum_data.ip100ns = core_info_table[cpu->cpu_index].ip100ns;
 
     assert(tcg_enabled());
     g_assert(!icount_enabled());
@@ -219,7 +217,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
 
     bool not_running_yet = true;
 
-    bool affiliated_with_quantum = cpu->quantum_data.ip10ps != 0 && quantum_enabled();
+    bool affiliated_with_quantum = cpu->quantum_data.ip100ns != 0 && quantum_enabled();
 
     // uint64_t dumping_threshold = 300 * 1000 * 1000; // 300M
 
@@ -236,9 +234,8 @@ static void *mttcg_cpu_thread_fn(void *arg)
                 // register the current thread to the barrier.
                 if (affiliated_with_quantum) {
 
-                    cpu->quantum_data.credit = (quantum_size * cpu->quantum_data.ip10ps) / 100;
-                    cpu->quantum_data.credit_in_time = quantum_size;
-                    cpu->quantum_data.most_recent_deadline_in_virtual_time = 0xFFFFFFFFFFFFFFFF;
+                    cpu->quantum_data.credit = (quantum_size * cpu->quantum_data.ip100ns) / 100;
+                    cpu->quantum_data.credit_in_10ps = quantum_size * 100;
                     cpu->quantum_data.generation = 0;
                     cpu->quantum_data.credit_required = 0;
                     cpu->quantum_data.credit_depleted = false;

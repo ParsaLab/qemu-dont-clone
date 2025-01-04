@@ -173,7 +173,7 @@ static int rr_cpu_count(void)
 }
 
 typedef struct core_meta_info_t {
-    uint64_t ip10ps;
+    uint64_t ip100ns;
     uint64_t affinity_core_idx;
 } core_meta_info_t;
 
@@ -181,7 +181,7 @@ static core_meta_info_t core_info_table[256];
 
 static void rrtcg_initialize_core_info_table(const char *file_name) {
     for(uint64_t i = 0; i < 256; ++i) {
-        core_info_table[i].ip10ps = 0;
+        core_info_table[i].ip100ns = 0;
         core_info_table[i].affinity_core_idx = i;
     }
 
@@ -211,8 +211,8 @@ static void rrtcg_initialize_core_info_table(const char *file_name) {
     while(fgets(line, 1024, fp) != NULL) {
         char *token = strtok(line, ",");
         double ipc = strtod(token, NULL);
-        core_info_table[core_id].ip10ps = (uint64_t)(ipc * 100);
-        assert(core_info_table[core_id].ip10ps > 0 && "IPC should be greater than 0");
+        core_info_table[core_id].ip100ns = (uint64_t)(ipc * 100);
+        assert(core_info_table[core_id].ip100ns > 0 && "IPC should be greater than 0");
         token = strtok(NULL, ",");
         core_info_table[core_id].affinity_core_idx = atoi(token);
         core_id += 1;
@@ -264,7 +264,7 @@ static void *rr_cpu_thread_fn(void *arg)
             qemu_wait_io_event_common(cpu);
 
             // Set up the ipc value for this processor.
-            cpu->ip10ps = core_info_table[cpu->cpu_index].ip10ps;
+            cpu->ip10ps = core_info_table[cpu->cpu_index].ip100ns;
 
             // No quantum is required at the beginning.
             cpu->quantum_required = 0;
@@ -370,7 +370,7 @@ static void *rr_cpu_thread_fn(void *arg)
 
                 qemu_mutex_unlock_iothread();
                 if (icount_enabled()) {
-                    uint64_t icount = (cpu_budget * core_info_table[cpu->cpu_index].ip10ps) / 100;
+                    uint64_t icount = (cpu_budget * core_info_table[cpu->cpu_index].ip100ns) / 100;
                     assert(icount > 0);
                     icount_prepare_for_run(cpu, icount);
                 }
