@@ -164,6 +164,18 @@ void cpu_disable_ticks(void)
                          &timers_state.vm_clock_lock);
 }
 
+void cpu_shift_vm_clock(int64_t shift) {
+    seqlock_write_lock(&timers_state.vm_clock_seqlock,
+                       &timers_state.vm_clock_lock);
+
+    // It is not allowed to shift the clock when the tick is enabled.
+    assert(!timers_state.cpu_ticks_enabled);
+    timers_state.cpu_clock_offset += shift;
+    
+    seqlock_write_unlock(&timers_state.vm_clock_seqlock,
+                         &timers_state.vm_clock_lock);
+}
+
 static bool icount_state_needed(void *opaque)
 {
     return false;

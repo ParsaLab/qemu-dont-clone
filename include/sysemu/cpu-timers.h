@@ -73,6 +73,8 @@ void icount_notify_exit(void);
 void cpu_enable_ticks(void);
 /* Caller must hold BQL */
 void cpu_disable_ticks(void);
+/* Caller must hold BQL */
+void cpu_shift_vm_clock(int64_t shift);
 
 /*
  * return the time elapsed in VM between vm_start and vm_stop.
