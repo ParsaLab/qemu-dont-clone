@@ -32,6 +32,7 @@
 #include "qemu/thread.h"
 #include "qemu/plugin-event.h"
 #include "qom/object.h"
+#include "qemu/quantum.h"
 
 typedef int (*WriteCoreDumpFunction)(const void *buf, size_t size,
                                      void *opaque);
@@ -450,12 +451,8 @@ struct CPUState {
     uint64_t target_cycle_on_idle; // number of target cycles that are deduced due to the idle time.
     uint64_t target_cycle_on_instruction; 
 
-    // State for deduction of the quantum.
-    uint64_t ip10ps; // instruction per 10 pico second . 0 means this core is not managed by the quantum.
-    int64_t quantum_budget;
-    uint64_t quantum_generation;
-    uint64_t quantum_required;
-    int quantum_budget_depleted;
+    // State for the quantum.
+    quantum_per_thread_data_t quantum_data;
 
     // State to query the latest timer interrupt deadline.
     uint64_t (*cb_next_timer_interrupt_time)(CPUState *);
