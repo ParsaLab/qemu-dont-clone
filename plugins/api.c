@@ -428,9 +428,15 @@ uint64_t qemu_plugin_entry_code(void)
     return entry;
 }
 
-qemu_plugin_io_mem_cb_t io_mem_cb = NULL;
+// Defining an empty IO Memory Callback so that running QEMU without QFlex doesn't 
+// result in calling a NUL function
+static void dummy_io_mem_cb (unsigned int bdf, uint64_t vaddr, void *userdata) {
+
+}
+
+qemu_plugin_io_mem_cb_t io_mem_cb = dummy_io_mem_cb;
 
 void qemu_plugin_register_io_mem_cb (qemu_plugin_io_mem_cb_t cb) {
-    assert(io_mem_cb == NULL);
+    assert(io_mem_cb == dummy_io_mem_cb);
     io_mem_cb = cb;
 }
