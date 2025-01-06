@@ -61,7 +61,7 @@ void mttcg_initialize_core_info_table(const char *file_name) {
     if (!fp) {
         if (quantum_enabled()) {
             // we don't do anything if the file is not found.
-            printf("IPC file (%s) is not found. It is needed under the quantum mode\n", file_name);
+            printf("IPC file (%s) is not found. It is needed under the quantum mode.\n", file_name);
             exit(1);
         } else {
             return;

@@ -189,7 +189,7 @@ static void rrtcg_initialize_core_info_table(const char *file_name) {
     FILE *fp = fopen(file_name, "r");
     if (!fp) {
         if (!qemu_tcg_mttcg_enabled()) {
-            printf("IPC file (%s) is not found. It is needed under the round-robin mode\n", file_name);
+            printf("IPC file (%s) is not found. It is needed under the round-robin mode.\n", file_name);
             exit(1);
         } else {
             return;

@@ -102,12 +102,12 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
             quantum_barrier.generation += 1;
             // update the passed time.
             quantum_barrier.passed_time += quantum_size;
-
-            quantum_barrier.last_thread_entered = 0; // this action will relax all synchronizing threads.
-            
+ 
             // release the lock and the quantum barrier.
             quantum_barrier.suspended_thread_count = 0;
             quantum_barrier.synchronizing_thread_count = 0;
+
+            quantum_barrier.last_thread_entered = 0; // this action will relax all synchronizing threads.
             quantum_barrier_unlock();
 
             // return. 
@@ -163,14 +163,14 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
                 quantum_barrier.per_thread_data[i]->credit_in_10ps = remaining_credit_in_time;
             }
 
-            // 5. Resume the advancement of the time. 
+            // 5. release the lock and the quantum barrier.
+            quantum_barrier.suspended_thread_count = 0;
+            quantum_barrier.synchronizing_thread_count = 0;
+
+            // 6. Resume the advancement of the time. 
             cpu_enable_ticks();
 
             quantum_barrier.last_thread_entered = 0; // this action will relax all synchronizing threads.
-
-            // 6. release the lock and the quantum barrier.
-            quantum_barrier.suspended_thread_count = 0;
-            quantum_barrier.synchronizing_thread_count = 0;
             quantum_barrier_unlock();
 
             // No need to fill the quantum credit by each thread anymore. 
@@ -227,19 +227,21 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
                 }
             }
         } else {
-            // We just need to wait for the last thread to come, and then we are done. 
-            if (quantum_barrier.last_thread_entered) {
-                // We need to wait for the last thread to finish its job.
-                while(quantum_barrier.last_thread_entered) {
-                    // do nothing
-                }
+            // wait for the last thread to come.
+            while(!quantum_barrier.last_thread_entered) {
 
-                // Return, because the quantum is resolved.
-                assert(quantum_barrier.quantum_resolution_result == QUANTUM_COMPLETE);
-                result->quantum_resolution_result = QUANTUM_COMPLETE;
-                result->generation = quantum_barrier.generation;
-                return;
             }
+
+            // wait for the last thread to finish its job.
+            while(quantum_barrier.last_thread_entered) {
+                // do nothing
+            }
+
+            // Return, because the quantum is resolved.
+            assert(quantum_barrier.quantum_resolution_result == QUANTUM_COMPLETE);
+            result->quantum_resolution_result = QUANTUM_COMPLETE;
+            result->generation = quantum_barrier.generation;
+            return;
         }
     }
 
