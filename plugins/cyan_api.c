@@ -272,9 +272,9 @@ void qemu_plugin_set_vcpu_vtime(uint32_t cpu_idx, uint64_t vtime) {
   cpu_virtual_time[cpu_idx].vts = vtime;
 }
 
-uint64_t qemu_plugin_get_vcpu_ip10ps(uint32_t cpu_idx) {
+uint64_t qemu_plugin_get_vcpu_ip100ns(uint32_t cpu_idx) {
   assert(current_cpu && current_cpu->cpu_index == cpu_idx);
-  return current_cpu->ip10ps;
+  return current_cpu->quantum_data.ip100ns;
 }
 
 bool qemu_plugin_register_flushing_local_tlb_cb(

@@ -264,10 +264,10 @@ static void *rr_cpu_thread_fn(void *arg)
             qemu_wait_io_event_common(cpu);
 
             // Set up the ipc value for this processor.
-            cpu->ip10ps = core_info_table[cpu->cpu_index].ip100ns;
+            cpu->quantum_data.ip100ns = core_info_table[cpu->cpu_index].ip100ns;
 
             // No quantum is required at the beginning.
-            cpu->quantum_required = 0;
+            cpu->quantum_data.credit_required = 0;
         }
     }
 
@@ -325,33 +325,13 @@ static void *rr_cpu_thread_fn(void *arg)
             // The time is increased here to avoid problem.
             icount_increase(cpu_budget);
 
-            // round the left quantum budget.
-            // Clean all core's quantum budget requirement.
-            // Is this necessary? (We need to check how the icount mode quits from the loop.)
-            for (int i = 0; i < rr_cpu_count(); i++) {
-                CPUState *cpu = first_cpu;
-                while (cpu) {
-                    cpu_virtual_time[cpu->cpu_index].vts += cpu->quantum_required * 10000 / cpu->ip10ps;
-                    cpu->quantum_required = 0;
-                    cpu = CPU_NEXT(cpu);
-                }
-            }
-
-            // SFind the maximum vtime and synchronize the time among all cores.
-            uint64_t max_vtime = 0;
-            for (int i = 0; i < rr_cpu_count(); i++) {
-                uint64_t vtime = cpu_virtual_time[i].vts;
-                if (vtime > max_vtime) {
-                    max_vtime = vtime;
-                }
-            }
-
+            uint64_t max_vtime = cycle * 100;
+            
             // Synchronize the time.
             for (int i = 0; i < rr_cpu_count(); i++) {
                 assert(cpu_virtual_time[i].vts <= max_vtime);
                 cpu_virtual_time[i].vts = max_vtime;
             }
-
 
            cpu = first_cpu;
         }

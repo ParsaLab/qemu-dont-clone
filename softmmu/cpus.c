@@ -31,6 +31,7 @@
 #include "qapi/qapi-events-run-state.h"
 #include "qapi/qmp/qerror.h"
 #include "exec/gdbstub.h"
+#include "qemu/quantum.h"
 #include "sysemu/hw_accel.h"
 #include "exec/cpu-common.h"
 #include "qemu/thread.h"
@@ -445,41 +446,13 @@ uint64_t qemu_wait_io_event(CPUState *cpu, bool not_running_yet, uint32_t *curre
             slept = true;
             qemu_plugin_vcpu_idle_cb(cpu);
         }
-        // if (!not_running_yet && is_vcpu_affiliated_with_quantum(cpu->cpu_index)) {
-        //     // Before going to sleep, you should let the quantum barrier know that I will not be involved.
-        //     cpu->unknown_time = 1;
-        //     assert(dynamic_barrier_polling_decrease_by_1(&quantum_barrier) == 0);
-        // }
-
-        // uint64_t current_cpu_clock = cpu_get_clock_locked();
-
-        // I need to calculate the number of host miliseconds that I have been sleeping.
-
+        
         if (runstate_is_running()) {
-            bool affiliated_with_quantum = cpu->ip10ps != 0 && quantum_enabled();
+            bool affiliated_with_quantum = cpu->quantum_data.ip100ns != 0 && quantum_enabled();
             if (affiliated_with_quantum) {
-
                 assert(cpu->cb_next_timer_interrupt_time != NULL);
 
-                uint64_t next_deadline = cpu->cb_next_timer_interrupt_time(cpu);
-
-                if (next_deadline == -1) {
-                    // This means that the next timer interrupt is not set.
-                    // We immediately go to the quantum barrier.
-                    cpu->quantum_budget = 0;
-                } else {
-                    cpu->quantum_budget -= (next_deadline * cpu->ip10ps) / 100;
-                }
-
-                if (cpu->quantum_budget <= 0) {
-                    cpu->quantum_budget = 0;
-                    cpu->quantum_budget_depleted = 1;
-                    break; // we need to break in order to wait for the barrier.
-                } else {
-                    // write down the deadline to the core and sleep.
-                    cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = next_deadline;
-                    qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
-                }
+                quantum_suspend(&cpu->quantum_data);
 
             } else {
                 qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
@@ -488,17 +461,6 @@ uint64_t qemu_wait_io_event(CPUState *cpu, bool not_running_yet, uint32_t *curre
             // well, there is no need to timeout. This is stopped by the system.
             qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
         }
-
-
-        // uint64_t current_cpu_clock_after_io = cpu_get_clock_locked();
-
-        // if (!not_running_yet && is_vcpu_affiliated_with_quantum(cpu->cpu_index)) {
-        //     // After sleep, you should let the quantum barrier know that I will be involved.
-        //     *current_quantum_generation = dynamic_barrier_polling_increase_by_1(&quantum_barrier);
-
-        //     idle_latency += current_cpu_clock_after_io - current_cpu_clock;
-
-        // }
 
         idle_latency = 1;
     }

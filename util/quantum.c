@@ -75,8 +75,8 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
     // First of all, get the lock of the quantum barrier. 
     quantum_barrier_lock();
 
-    assert(quantum_barrier.suspended_thread_count >= 0);
-    assert(quantum_barrier.synchronizing_thread_count >= 0);
+    assert(quantum_barrier.suspended_thread_count < quantum_barrier.threshold);
+    assert(quantum_barrier.synchronizing_thread_count < quantum_barrier.threshold);
 
     // Now, if the thread is suspended, increase the suspended_thread_count.
     if (is_suspended) {
@@ -186,8 +186,8 @@ void quantum_barrier_wait(uint64_t is_suspended, quantum_barrier_resolution_resu
         // Depending on the is_suspended, wait. 
         if (is_suspended) {
             while (1) {
-                if (cpu_can_run(current_cpu)) {
-                    // The thread can run. It should go to another state. 
+                if (!cpu_thread_is_idle(current_cpu)) {
+                    // The thread has some task to process. It should go to another state. 
                     // Before doing that, we need to decrease the suspended_thread_count.
                     // Get the lock
                     quantum_barrier_lock();
@@ -258,7 +258,9 @@ void quantum_recharge(int64_t threshold, quantum_per_thread_data_t *per_thread_d
         uint64_t local_target_time_in_10ps = (result.generation * quantum_size * 100) - (per_thread_data->credit * 10000 / (int64_t)per_thread_data->ip100ns);
         cpu_virtual_time[current_cpu->cpu_index].vts = local_target_time_in_10ps;
         // Now, we update the credit and the generation accordingly. 
-        per_thread_data->credit += (quantum_size * per_thread_data->ip100ns) / 100;
+        int64_t increment = (quantum_size * per_thread_data->ip100ns) / 100;
+        assert(increment > 0);
+        per_thread_data->credit += increment;
         assert(result.generation == per_thread_data->generation + 1);
         per_thread_data->generation = result.generation;
     }
@@ -285,6 +287,7 @@ void quantum_suspend(quantum_per_thread_data_t *per_thread_data) {
             cpu_virtual_time[current_cpu->cpu_index].vts = local_target_time_in_10ps;
             // The credit is aligned with the quantum barrier.
             per_thread_data->credit = (quantum_size * per_thread_data->ip100ns) / 100;
+            assert(per_thread_data->credit > 0);
             // the generation is updated accordingly. 
             per_thread_data->generation = result.generation;
             break;
