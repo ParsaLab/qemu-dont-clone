@@ -234,6 +234,7 @@ static void *mttcg_cpu_thread_fn(void *arg)
                 cpu->enter_idle_time = 0;
                 cpu->target_cycle_on_idle = 0;
                 cpu->target_cycle_on_instruction = 0;
+                cpu->touched_timer_during_last_quantum = 0;
 
                 // register the current thread to the barrier.
                 if (affiliated_with_quantum) {
@@ -263,12 +264,17 @@ static void *mttcg_cpu_thread_fn(void *arg)
                         cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
                         bool stop_request = false;
 
-                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
-            
+                        uint64_t new_generation = dynamic_barrier_polling_wait(
+                            &quantum_barrier, 
+                            cpu->quantum_generation, 
+                            &stop_request, 
+                            cpu->touched_timer_during_last_quantum != 0
+                        );
                         
                         assert(new_generation == old_generation + 1);
                         cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                         cpu->quantum_generation = new_generation;
+                        cpu->touched_timer_during_last_quantum = 0;
 
                         if (stop_request) {
                             break;
@@ -305,12 +311,18 @@ static void *mttcg_cpu_thread_fn(void *arg)
                         cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
                         bool stop_request = false;
 
-                        uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
+                        uint64_t new_generation = dynamic_barrier_polling_wait(
+                            &quantum_barrier, 
+                            cpu->quantum_generation, 
+                            &stop_request, 
+                            cpu->touched_timer_during_last_quantum != 0
+                        );
             
                         
                         assert(new_generation == old_generation + 1);
                         cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                         cpu->quantum_generation = new_generation;
+                        cpu->touched_timer_during_last_quantum = 0;
 
                         if (stop_request) {
                             break;
@@ -340,11 +352,17 @@ static void *mttcg_cpu_thread_fn(void *arg)
                     cpu_virtual_time[cpu->cpu_index].next_deadline_in_ns = -1;
                     bool stop_request = false;
 
-                    uint64_t new_generation = dynamic_barrier_polling_wait(&quantum_barrier, cpu->quantum_generation, &stop_request);
-        
+                    uint64_t new_generation = dynamic_barrier_polling_wait(
+                        &quantum_barrier, 
+                        cpu->quantum_generation, 
+                        &stop_request, 
+                        cpu->touched_timer_during_last_quantum != 0
+                    );
+                
                     assert(new_generation == old_generation + 1);
                     cpu->quantum_budget += (quantum_size * cpu->ip10ps) / 100;
                     cpu->quantum_generation = new_generation;
+                    cpu->touched_timer_during_last_quantum = 0;
 
                     if (stop_request) {
                         break;

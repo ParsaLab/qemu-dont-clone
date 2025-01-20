@@ -32,6 +32,7 @@
 #include "qemu/main-loop.h"
 #include "qemu/option.h"
 #include "qemu/seqlock.h"
+#include "sysemu/quantum.h"
 #include "sysemu/replay.h"
 #include "sysemu/runstate.h"
 #include "hw/core/cpu.h"
@@ -75,6 +76,10 @@ int64_t cpu_get_ticks(void)
 int64_t cpu_get_clock_locked(void)
 {
     int64_t time;
+
+    if (quantum_enabled()) {
+        return timers_state.cpu_clock_offset + timers_state.quantum_set_time;
+    }
 
     if (cyan_cpu_clock_cb) {
         return cyan_cpu_clock_cb();
@@ -157,9 +162,27 @@ void cpu_disable_ticks(void)
             timers_state.cpu_clock_offset = cpu_get_clock_locked();
         }
 
+        if (quantum_enabled()) {
+            timers_state.quantum_set_time = 0;
+        }
+
         // record the time of the guest system. 
         timers_state.cpu_ticks_enabled = 0;
     }
+    seqlock_write_unlock(&timers_state.vm_clock_seqlock,
+                         &timers_state.vm_clock_lock);
+}
+
+void increase_quantum_time(void) {
+    assert(quantum_enabled());
+    
+    seqlock_write_lock(&timers_state.vm_clock_seqlock,
+                       &timers_state.vm_clock_lock);
+
+    if (timers_state.cpu_ticks_enabled) {
+        timers_state.quantum_set_time += quantum_size;
+    }
+
     seqlock_write_unlock(&timers_state.vm_clock_seqlock,
                          &timers_state.vm_clock_lock);
 }
@@ -302,6 +325,8 @@ void cpu_timers_init(void)
     seqlock_init(&timers_state.vm_clock_seqlock);
     qemu_spin_init(&timers_state.vm_clock_lock);
     vmstate_register(NULL, 0, &vmstate_timers, &timers_state);
+
+    timers_state.quantum_set_time = 0;
 
     cpu_throttle_init();
 }

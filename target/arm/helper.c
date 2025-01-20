@@ -1347,6 +1347,7 @@ static void pmccntr_op_finish(CPUARMState *env)
                                  overflow_in, &overflow_at)) {
                 ARMCPU *cpu = env_archcpu(env);
                 timer_mod_anticipate_ns(cpu->pmu_timer, overflow_at);
+                cpu->parent_obj.touched_timer_during_last_quantum = true;
             }
         }
 #endif
@@ -1404,6 +1405,7 @@ static void pmevcntr_op_finish(CPUARMState *env, uint8_t counter)
                                  overflow_in, &overflow_at)) {
                 ARMCPU *cpu = env_archcpu(env);
                 timer_mod_anticipate_ns(cpu->pmu_timer, overflow_at);
+                cpu->parent_obj.touched_timer_during_last_quantum = true;
             }
         }
 #endif
@@ -2669,8 +2671,10 @@ static void gt_recalc_timer(ARMCPU *cpu, int timeridx)
          */
         if (nexttick > INT64_MAX / gt_cntfrq_period_ns(cpu)) {
             timer_mod_ns(cpu->gt_timer[timeridx], INT64_MAX);
+            cpu->parent_obj.touched_timer_during_last_quantum = true;
         } else {
             timer_mod(cpu->gt_timer[timeridx], nexttick);
+            cpu->parent_obj.touched_timer_during_last_quantum = true;
         }
         trace_arm_gt_recalc(timeridx, irqstate, nexttick);
     } else {
@@ -2678,6 +2682,7 @@ static void gt_recalc_timer(ARMCPU *cpu, int timeridx)
         gt->ctl &= ~4;
         qemu_set_irq(cpu->gt_timer_outputs[timeridx], 0);
         timer_del(cpu->gt_timer[timeridx]);
+        cpu->parent_obj.touched_timer_during_last_quantum = true;
         trace_arm_gt_recalc_disabled(timeridx);
     }
 }

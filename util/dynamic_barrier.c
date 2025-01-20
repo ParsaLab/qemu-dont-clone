@@ -5,6 +5,9 @@
 #include <unistd.h>
 
 #include "qemu/osdep.h"
+#include "qemu/timer.h"
+#include "sysemu/cpu-timers.h"
+#include "qemu/main-loop.h"
 #include "sysemu/runstate.h"
 #include "sysemu/quantum.h"
 #include "qemu/plugin-cyan.h"
@@ -135,6 +138,8 @@ int dynamic_barrier_polling_init(dynamic_barrier_polling_t *barrier, int initial
         barrier->histogram[i] = create_histogram(100, 1e5, 101e5);
     }
 
+    barrier->timer_update_request = false;
+
     barrier->current_cycle = 0;
     barrier->next_check_threshold = quantum_check_threshold;
     
@@ -160,14 +165,18 @@ static void dynamic_barrier_polling_release_lock(dynamic_barrier_polling_t *barr
     atomic_fetch_add(&barrier->lock.now_serving, 1);
 }
 
-uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32_t private_generation, bool *stop_request) {
+uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32_t private_generation, bool *stop_request, bool check_time) {
     dynamic_barrier_polling_acquire_lock(barrier);
 
     uint64_t current_gen = atomic_load(&barrier->generation);
 
     assert(private_generation == current_gen);
 
-    uint64_t waiting_count = barrier->count; 
+    if (check_time) {
+        barrier->timer_update_request = true;
+    }
+
+    uint64_t waiting_count = barrier->count;
     
     if (waiting_count == barrier->threshold - 1) {
         barrier->current_cycle += quantum_size;
@@ -208,6 +217,20 @@ uint32_t dynamic_barrier_polling_wait(dynamic_barrier_polling_t *barrier, uint32
 
             cpu_virtual_time[i].vts = max_vtime;
         }
+
+        // Advance the virtual clock by the quantum size. 
+        qemu_mutex_lock_iothread();
+
+        increase_quantum_time();
+        
+        if (barrier->timer_update_request) {
+            // I need to update the clock and update the timer. 
+            qemu_clock_run_timers(QEMU_CLOCK_VIRTUAL);
+        }
+
+        qemu_mutex_unlock_iothread();
+
+        barrier->timer_update_request = false;
 
         // increase the generation and notify others.
         atomic_fetch_add(&barrier->generation, 1);
