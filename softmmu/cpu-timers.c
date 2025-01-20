@@ -75,15 +75,15 @@ int64_t cpu_get_ticks(void)
 
 int64_t cpu_get_clock_locked(void)
 {
-    int64_t time;
-
     if (quantum_enabled()) {
-        return timers_state.cpu_clock_offset + timers_state.quantum_set_time;
+        return timers_state.virtual_clock_snapshot + timers_state.quantum_set_time;
     }
 
     if (cyan_cpu_clock_cb) {
         return cyan_cpu_clock_cb();
     }
+
+    int64_t time;
 
     time = timers_state.cpu_clock_offset;
     if (timers_state.cpu_ticks_enabled) {
