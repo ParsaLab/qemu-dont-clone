@@ -457,6 +457,8 @@ struct CPUState {
     uint64_t quantum_required;
     int quantum_budget_depleted;
 
+    uint64_t touched_timer_during_last_quantum; // whether this core has touched the timer during the last quantum.
+
     // State to query the latest timer interrupt deadline.
     uint64_t (*cb_next_timer_interrupt_time)(CPUState *);
 };
